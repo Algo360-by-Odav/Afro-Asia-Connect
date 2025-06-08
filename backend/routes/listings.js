@@ -134,6 +134,7 @@ router.get('/:id', async (req, res) => {
 // @desc    Create a new business listing
 // @access  Private (requires authentication, only sellers)
 router.post('/', authMiddleware, async (req, res) => {
+  console.log('Received POST /api/listings request body:', req.body); // Added for debugging
   const { 
     business_name,
     business_category,
@@ -153,9 +154,11 @@ router.post('/', authMiddleware, async (req, res) => {
 
   const user_id = req.user.id; // From authMiddleware
 
-  // Basic validation
-  if (!business_name || !business_category || !contact_email) {
-    return res.status(400).json({ msg: 'Please provide business name, category, and contact email.' });
+  // Basic validation for required fields
+  console.log('DEBUG: Checking required fields. BN:', business_name, 'BC:', business_category, 'D:', description, 'COO:', country_of_origin);
+  if (!business_name || !business_category || !description || !country_of_origin) {
+    console.error('DEBUG: Required fields validation failed. Sending 400.');
+    return res.status(400).json({ msg: 'VALIDATION_ERROR: Please provide all required fields (business_name, business_category, description, country_of_origin).' });
   }
   
   console.log('--- DEBUG: req.user in POST /api/listings:', JSON.stringify(req.user, null, 2));
@@ -168,9 +171,11 @@ router.post('/', authMiddleware, async (req, res) => {
   try {
     const newListingQuery = `
       INSERT INTO business_listings 
-        (user_id, business_name, business_category, description, country_of_origin, target_markets, contact_email, contact_phone, website_url, logo_image_url, gallery_image_urls, subsector, languages_spoken, is_verified, products_info)
+        (user_id, business_name, business_category, description, country_of_origin, 
+         target_markets, contact_email, contact_phone, website_url, logo_image_url, gallery_image_urls,
+         is_active)
       VALUES 
-        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, TRUE)
       RETURNING *;
     `;
     const values = [
@@ -184,11 +189,7 @@ router.post('/', authMiddleware, async (req, res) => {
       contact_phone, 
       website_url, 
       logo_image_url, 
-      gallery_image_urls || [], // Default to empty array
-      subsector,        // New
-      languages_spoken, // New
-      is_verified,      // New (ensure default in DB or handle null here)
-      products_info     // New (ensure it's valid JSON or null)
+      gallery_image_urls || null // Default to null if not provided (consider if DB expects array or can handle null) or null)
     ];
 
     const result = await db.query(newListingQuery, values);
@@ -334,6 +335,130 @@ router.delete('/:id', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('Error deleting listing:', err.message);
     res.status(500).json({ msg: 'Server error while deleting listing.', error: err.message });
+  }
+});
+
+// @route   GET api/listings/:id
+// @desc    Get a single business listing by ID
+// @access  Public (or Private if you want to restrict who can view listings)
+router.get('/:id', async (req, res) => {
+  try {
+    const listingId = parseInt(req.params.id, 10);
+    if (isNaN(listingId)) {
+      return res.status(400).json({ msg: 'Invalid listing ID format.' });
+    }
+
+    const query = 'SELECT * FROM business_listings WHERE id = $1';
+    const result = await db.query(query, [listingId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ msg: 'Listing not found.' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching listing by ID:', err.message);
+    res.status(500).json({ msg: 'Server error while fetching listing.' });
+  }
+});
+
+
+// @route   PUT api/listings/:id
+// @desc    Update an existing business listing
+// @access  Private (only owner or admin should update)
+router.put('/:id', authMiddleware, async (req, res) => {
+  const listingId = parseInt(req.params.id, 10);
+  if (isNaN(listingId)) {
+    return res.status(400).json({ msg: 'Invalid listing ID format.' });
+  }
+
+  const {
+    business_name,
+    business_category,
+    description,
+    country_of_origin,
+    target_markets,
+    contact_email,
+    contact_phone,
+    website_url,
+    logo_image_url,
+    gallery_image_urls,
+    is_active // Allow updating is_active status if needed
+    // Add any other fields that can be updated
+  } = req.body;
+
+  const userId = req.user.id;
+
+  // Basic validation for required fields that are being updated
+  if (!business_name || !business_category || !description || !country_of_origin) {
+    return res.status(400).json({ msg: 'VALIDATION_ERROR: Business name, category, description, and country of origin are required.' });
+  }
+
+  try {
+    // First, verify the listing exists and the user owns it (or is an admin)
+    const verifyQuery = 'SELECT user_id FROM business_listings WHERE id = $1';
+    const verifyResult = await db.query(verifyQuery, [listingId]);
+
+    if (verifyResult.rows.length === 0) {
+      return res.status(404).json({ msg: 'Listing not found.' });
+    }
+
+    // Authorization check: user must be the owner of the listing
+    // You might want to allow admins to edit any listing too
+    if (verifyResult.rows[0].user_id !== userId) {
+      return res.status(403).json({ msg: 'User not authorized to update this listing.' });
+    }
+
+    // Construct the SET part of the UPDATE query dynamically based on provided fields
+    // For simplicity, this example updates all fields sent in the body.
+    // A more robust solution would build the SET clause based on which fields are actually present in req.body.
+    const updateQuery = `
+      UPDATE business_listings
+      SET 
+        business_name = $1,
+        business_category = $2,
+        description = $3,
+        country_of_origin = $4,
+        target_markets = $5,
+        contact_email = $6,
+        contact_phone = $7,
+        website_url = $8,
+        logo_image_url = $9,
+        gallery_image_urls = $10,
+        is_active = $11,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $12 AND user_id = $13
+      RETURNING *;
+    `;
+
+    const values = [
+      business_name,
+      business_category,
+      description,
+      country_of_origin,
+      target_markets || null,
+      contact_email || null,
+      contact_phone || null,
+      website_url || null,
+      logo_image_url || null,
+      gallery_image_urls || null,
+      typeof is_active === 'boolean' ? is_active : true, // Default to true if not specified or invalid
+      listingId,
+      userId
+    ];
+
+    const result = await db.query(updateQuery, values);
+
+    if (result.rows.length === 0) {
+      // This case should ideally not be hit if the initial verification and user_id check in WHERE clause are correct
+      return res.status(404).json({ msg: 'Listing not found or user mismatch during update.' }); 
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating listing:', err.message);
+    // Check for specific PostgreSQL errors if needed, e.g., err.code
+    res.status(500).json({ msg: 'Server error while updating listing.', error: err.message });
   }
 });
 

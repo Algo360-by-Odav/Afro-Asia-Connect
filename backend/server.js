@@ -2,8 +2,11 @@ require('dotenv').config(); // Load environment variables at the very top
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/auth'); // Import auth routes
-const listingRoutes = require('./routes/listings'); // Import listing routes
+const listingRoutes = require('./routes/listings');
+const leadRoutes = require('./routes/leads'); // Added leads routes // Import listing routes
+const subscriptionRoutes = require('./routes/subscriptions'); // Import subscription routes
 const notificationRoutes = require('./routes/notifications'); // Import notification routes
+const eventRoutes = require('./routes/events'); // Import event routes
 
 const app = express();
 const PORT = process.env.PORT || 3001; // Backend server port, now respects .env
@@ -20,7 +23,10 @@ app.get('/', (req, res) => {
 // Authentication routes
 app.use('/api/auth', authRoutes);
 app.use('/api/listings', listingRoutes);
+app.use('/api/leads', leadRoutes); 
+app.use('/api/subscriptions', subscriptionRoutes); 
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/events', eventRoutes);
 
 // Global error handlers - place them before app.listen
 process.on('unhandledRejection', (reason, promise) => {
