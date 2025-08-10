@@ -1,0 +1,927 @@
+// Prisma schema for AfroAsiaConnect B2B marketplace
+// Run: npx prisma generate && npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int       @id @default(autoincrement())
+  email       String    @unique
+  password    String
+  role        Role      @default(BUYER)
+  firstName   String?  @map("first_name")
+  lastName    String?  @map("last_name")
+  phone       String?  @map("phone")
+  smsPreferences Json? @map("sms_preferences")
+  isActive    Boolean  @default(true) @map("is_active")
+  isAdmin     Boolean  @default(false) @map("is_admin")
+  createdAt   DateTime  @default(now())
+  companies   Company[] @relation("CompanyOwners")
+  reviews     Review[]
+  rfqs        RFQ[]     @relation("BuyerRFQs")
+  rfqBids     RFQResponse[]
+  buyerThreads ChatThread[] @relation("BuyerThreads")
+  notifications Notification[]
+  businessListings BusinessListing[]
+  services     Service[]
+  messages    ChatMessage[]
+  providerConsultations Consultation[] @relation("ProviderConsultations")
+  buyerConsultations   Consultation[] @relation("BuyerConsultations")
+  consultationNotes    ConsultationNote[]
+  workingHours         WorkingHours[]
+  providerConfig      ProviderConfig?
+  documents          Document[]
+  targetShares       DocumentShare[] @relation("TargetUserShares")
+  messageTemplates   MessageTemplate[]
+  scheduledMessages  ScheduledMessage[] @relation("ScheduledMessageSender")
+  conversations      Conversation[] @relation("ConversationParticipants")
+  createdConversations Conversation[] @relation("ConversationCreator")
+  sentMessages       Message[]
+  messageAnalytics   MessageAnalytics[]
+  auditLogs          SecurityAuditLog[]
+  securityAlerts     SecurityAlert[]
+  resolvedAlerts     SecurityAlert[] @relation("AlertResolver")
+  automationWorkflows AutomationWorkflow[] @relation("UserAutomationWorkflows")
+  automationLogs     AutomationLog[] @relation("UserAutomationLogs")
+  leads              Lead[] @relation("UserLeads")
+  assignedLeads      Lead[] @relation("AssignedLeads")
+  followUps          FollowUp[] @relation("UserFollowUps")
+  profileViewsGiven  ProfileView[] @relation("ProfileViewer")
+  profileViewsReceived ProfileView[] @relation("ProfileViewed")
+  marketAnalytics    MarketAnalytics[] @relation("UserMarketAnalytics")
+  
+  // Booking system relations
+  customerBookings   Booking[] @relation("CustomerBookings")
+  providerBookings   Booking[] @relation("ProviderBookings")
+  customerReviews    ServiceReview[] @relation("CustomerReviews")
+  providerReviews    ServiceReview[] @relation("ProviderReviews")
+  
+  // Payment system relations
+  providerPayouts    Payout[] @relation("ProviderPayouts")
+  
+  // SMS Verification relations
+  verificationCodes  VerificationCode[]
+
+  @@map("users")
+}
+
+model Company {
+  id          Int                @id @default(autoincrement())
+  name        String
+  industry    String?
+  location    String?
+  description String?
+  verified    Boolean            @default(false)
+  trustScore  Int                @default(0)
+  yearFounded Int?
+  createdAt   DateTime           @default(now())
+  owners      User[]             @relation("CompanyOwners")
+  products    Product[]
+  verificationRequests VerificationRequest[]
+  reviews     Review[]
+  rfqBids     RFQResponse[]
+  supplierThreads ChatThread[] @relation("SupplierThreads")
+  website     String?
+  whatsapp    String?
+  linkedin    String?
+  averageRating Float? @default(0)
+}
+
+enum Role {
+  BUYER
+  SUPPLIER
+  SERVICE_PROVIDER
+  ADMIN
+}
+
+model VerificationRequest {
+  id          Int       @id @default(autoincrement())
+  company     Company   @relation(fields: [companyId], references: [id])
+  companyId   Int
+  status      VerificationStatus @default(PENDING)
+  documents   Json
+  createdAt   DateTime  @default(now())
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  company     Company  @relation(fields: [companyId], references: [id])
+  companyId   Int
+  title       String
+  description String?
+  images      Json
+  price       Float?
+  moq         Int?
+  leadTime    String?
+  category    String?
+  createdAt   DateTime @default(now())
+}
+
+model Review {
+  id          Int      @id @default(autoincrement())
+  reviewer    User     @relation(fields: [reviewerId], references: [id])
+  reviewerId  Int
+  company     Company  @relation(fields: [companyId], references: [id])
+  companyId   Int
+  rating      Int
+  text        String?
+  disputeStatus ReviewDisputeStatus @default(NONE)
+  createdAt   DateTime @default(now())
+}
+
+enum ReviewDisputeStatus {
+  NONE
+  DISPUTED
+  RESOLVED
+}
+
+model RFQ {
+  id          Int      @id @default(autoincrement())
+  buyer       User     @relation("BuyerRFQs", fields: [buyerId], references: [id])
+  buyerId     Int
+  title       String
+  details     String?
+  category    String?
+  quantity    Int?
+  location    String?
+  status      RFQStatus @default(OPEN)
+  createdAt   DateTime @default(now())
+  bids        RFQResponse[]
+  threads     ChatThread[] @relation("RFQThreads")
+}
+
+enum RFQStatus {
+  OPEN
+  NEGOTIATING
+  AWARDED
+  CLOSED
+}
+
+model RFQResponse {
+  id          Int      @id @default(autoincrement())
+  rfq         RFQ      @relation(fields: [rfqId], references: [id])
+  rfqId       Int
+  supplier    Company  @relation(fields: [supplierId], references: [id])
+  supplierId  Int
+  salesperson User?    @relation(fields: [salespersonId], references: [id])
+  salespersonId Int?
+  price       Float?
+  message     String?
+  status      RFQResponseStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+}
+
+enum RFQResponseStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model ChatThread {
+  id          Int          @id @default(autoincrement())
+  buyer       User         @relation("BuyerThreads", fields: [buyerId], references: [id])
+  buyerId     Int
+  supplier    Company      @relation("SupplierThreads", fields: [supplierId], references: [id])
+  supplierId  Int
+  rfq         RFQ?         @relation("RFQThreads", fields: [rfqId], references: [id])
+  rfqId       Int?
+  createdAt   DateTime     @default(now())
+  messages    ChatMessage[]
+
+}
+
+model ChatMessage {
+  id          Int       @id @default(autoincrement())
+  thread      ChatThread @relation(fields: [threadId], references: [id])
+  threadId    Int
+  sender      User      @relation(fields: [senderId], references: [id])
+  senderId    Int
+  content     String
+  createdAt   DateTime  @default(now())
+}
+
+model Notification {
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int      @map("user_id")
+  type       String
+  message    String
+  link       String?
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("notifications")
+}
+
+model BusinessListing {
+  id                Int      @id @default(autoincrement())
+  user              User     @relation(fields: [userId], references: [id])
+  userId            Int      @map("user_id")
+  businessName      String   @map("business_name")
+  businessCategory  String   @map("business_category")
+  description       String
+  countryOfOrigin   String   @map("country_of_origin")
+  targetMarkets     Json?    @map("target_markets")
+  contactEmail      String?  @map("contact_email")
+  contactPhone      String?  @map("contact_phone")
+  websiteUrl        String?  @map("website_url")
+  logoImageUrl      String?  @map("logo_image_url")
+  galleryImageUrls  Json?    @map("gallery_image_urls")
+  languagesSpoken   Json?    @map("languages_spoken")
+  isActive          Boolean  @default(true) @map("is_active")
+  isVerified        Boolean  @default(false) @map("is_verified")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("business_listings")
+}
+
+model SubscriptionPlan {
+  id           Int      @id @default(autoincrement())
+  name         String
+  price        Float?
+  currency     String?
+  durationDays Int      @map("duration_days")
+  features     Json?
+  description  String?
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("subscription_plans")
+}
+
+model Service {
+  id              Int      @id @default(autoincrement())
+  user            User     @relation(fields: [userId], references: [id])
+  userId          Int      @map("user_id")
+  serviceName     String   @map("service_name")
+  serviceCategory String   @map("service_category")
+  description     String?
+  price           Float?
+  duration        Int      @default(60) // minutes
+  isActive        Boolean  @default(true) @map("is_active")
+  location        String?
+  tags            String[] @default([])
+  images          String[] @default([])
+  requirements    String?
+  deliverables    String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations for booking system
+  bookings        Booking[]
+  reviews         ServiceReview[]
+
+  @@map("services")
+}
+
+enum ConsultationStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  COMPLETED
+}
+
+model Consultation {
+  id          Int       @id @default(autoincrement())
+  provider    User      @relation("ProviderConsultations", fields: [providerId], references: [id])
+  providerId  Int
+  buyer       User      @relation("BuyerConsultations", fields: [buyerId], references: [id])
+  buyerId     Int
+  serviceType String
+  start       DateTime
+  end         DateTime
+  status      ConsultationStatus @default(PENDING)
+  price       Float?
+  urgent      Boolean  @default(false)
+  videoLink   String?
+  notes       ConsultationNote[]
+  feedback    Feedback?
+  createdAt   DateTime @default(now())
+}
+
+model ConsultationNote {
+  id             Int           @id @default(autoincrement())
+  consultation   Consultation  @relation(fields: [consultationId], references: [id])
+  consultationId Int
+  author         User          @relation(fields: [authorId], references: [id])
+  authorId       Int
+  text           String
+  createdAt      DateTime @default(now())
+}
+
+model WorkingHours {
+  id         Int  @id @default(autoincrement())
+  provider   User @relation(fields: [providerId], references: [id])
+  providerId Int
+  weekday    Int
+  startTime  String
+  endTime    String
+  unavailableDate DateTime?
+}
+
+enum DocCategory {
+  GENERAL_BUSINESS
+  TRADE
+  COMPLIANCE
+  GOVERNMENT
+  CONTRACTS
+}
+
+enum DocVisibility {
+  PRIVATE
+  SHAREABLE
+  PUBLIC
+}
+
+model ProviderConfig {
+  provider     User   @relation(fields: [providerId], references: [id])
+  providerId   Int   @id
+  allowUrgent  Boolean @default(false)
+  unavailableDates Json? // string[] of ISO dates
+}
+
+model Document {
+  shares       DocumentShare[]
+  id          Int         @id @default(autoincrement())
+  owner       User        @relation(fields: [ownerId], references: [id])
+  ownerId     Int
+  title       String
+  category    DocCategory
+  filename    String
+  mimeType    String
+  expiry      DateTime?
+  visibility  DocVisibility @default(PRIVATE)
+  createdAt   DateTime     @default(now())
+  
+  // Version history
+  parent      Document?   @relation("DocumentVersions", fields: [parentId], references: [id])
+  parentId    Int?
+  children    Document[]  @relation("DocumentVersions")
+  version     Int         @default(1)
+  isActive    Boolean     @default(true)
+}
+
+model Conversation {
+  id               Int       @id @default(autoincrement())
+  title            String?   // Group chat name (null for 1-on-1 chats)
+  description      String?   // Group chat description
+  isGroup          Boolean   @default(false) // true for group chats
+  createdBy        User?     @relation("ConversationCreator", fields: [createdById], references: [id])
+  createdById      Int?      // Who created the group
+  participants     User[]    @relation("ConversationParticipants")
+  messages         Message[]
+  scheduledMessages ScheduledMessage[]
+  messageAnalytics MessageAnalytics[]
+  lastMessage      Message?  @relation("LastMessage", fields: [lastMessageId], references: [id])
+  lastMessageId    Int?      @unique
+  conversationKey  ConversationKey?
+  leads            Lead[]    @relation("ConversationLeads")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  @@map("conversations")
+  
+  // Optional: Link to service request or consultation
+  serviceRequestId Int?
+  consultationId   Int?
+}
+
+model Message {
+  id             Int          @id @default(autoincrement())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId Int
+  sender         User         @relation(fields: [senderId], references: [id])
+  senderId       Int
+  content        String
+  messageType    MessageType  @default(TEXT)
+  fileUrl        String?      // For file attachments
+  fileName       String?      // Original filename
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  
+  // Security relations
+  encryptedMessage EncryptedMessage?
+  
+  // Automation relations
+  automationLogs AutomationLog[] @relation("MessageAutomationLogs")
+  
+  // Relation for last message
+  lastMessageFor Conversation? @relation("LastMessage")
+}
+
+enum MessageType {
+  TEXT
+  FILE
+  SYSTEM
+}
+
+model MessageTemplate {
+  id          Int      @id @default(autoincrement())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      Int
+  title       String   // Template name
+  content     String   // Template content
+  category    String   @default("general") // general, greeting, closing, etc.
+  isActive    Boolean  @default(true)
+  usageCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("message_templates")
+}
+
+model ScheduledMessage {
+  id             Int      @id @default(autoincrement())
+  sender         User     @relation("ScheduledMessageSender", fields: [senderId], references: [id])
+  senderId       Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId Int
+  content        String
+  messageType    MessageType @default(TEXT)
+  fileUrl        String?
+  fileName       String?
+  scheduledFor   DateTime  // When to send the message
+  status         ScheduledMessageStatus @default(PENDING)
+  sentAt         DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@map("scheduled_messages")
+}
+
+enum ScheduledMessageStatus {
+  PENDING
+  SENT
+  CANCELLED
+  FAILED
+}
+
+model MessageAnalytics {
+  id             Int      @id @default(autoincrement())
+  user           User     @relation(fields: [userId], references: [id])
+  userId         Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId Int
+  
+  // Response time metrics
+  averageResponseTime Int?  // in minutes
+  totalMessages      Int   @default(0)
+  messagesReceived   Int   @default(0)
+  messagesSent       Int   @default(0)
+  
+  // Engagement metrics
+  templatesUsed      Int   @default(0)
+  scheduledMessages  Int   @default(0)
+  filesShared        Int   @default(0)
+  
+  // Time periods
+  date               DateTime @default(now()) @db.Date
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  
+  @@unique([userId, conversationId, date])
+  @@map("message_analytics")
+}
+
+model DocumentShare {
+  id            Int       @id @default(autoincrement())
+  document      Document  @relation(fields: [documentId], references: [id])
+  documentId    Int
+  targetUser    User      @relation("TargetUserShares", fields: [targetUserId], references: [id])
+  targetUserId  Int
+  sharedAt      DateTime  @default(now())
+  expiresAt     DateTime?
+  viewedAt      DateTime?
+  isRevoked     Boolean   @default(false)
+  revokedAt     DateTime?
+  
+  @@map("document_shares")
+}
+
+model Feedback {
+  id             Int @id @default(autoincrement())
+  consultation   Consultation @relation(fields: [consultationId], references: [id])
+  consultationId Int @unique
+  rating         Int
+  comment        String?
+  createdAt      DateTime @default(now())
+
+  @@map("feedback")
+}
+
+// Security and Compliance Models
+model ConversationKey {
+  id                Int      @id @default(autoincrement())
+  conversationId    Int      @unique @map("conversation_id")
+  encryptedKey      String   @map("encrypted_key")
+  iv                String
+  tag               String
+  keyVersion        Int      @default(1) @map("key_version")
+  createdAt         DateTime @default(now()) @map("created_at")
+  rotatedAt         DateTime? @map("rotated_at")
+  isActive          Boolean  @default(true) @map("is_active")
+
+  conversation      Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("conversation_keys")
+}
+
+model SecurityAuditLog {
+  id           Int      @id @default(autoincrement())
+  userId       Int?     @map("user_id")
+  eventType    String   @map("event_type")
+  resourceType String   @map("resource_type")
+  resourceId   Int?     @map("resource_id")
+  action       String
+  riskLevel    String   @map("risk_level")
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  metadata     Json?
+  success      Boolean  @default(true)
+  errorMessage String?  @map("error_message")
+  timestamp    DateTime @default(now())
+
+  user         User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([timestamp])
+  @@index([riskLevel])
+  @@map("security_audit_logs")
+}
+
+model SecurityAlert {
+  id          Int      @id @default(autoincrement())
+  userId      Int?     @map("user_id")
+  alertType   String   @map("alert_type")
+  severity    String
+  description String
+  status      String   @default("active")
+  metadata    Json?
+  resolvedBy  Int?     @map("resolved_by")
+  resolution  String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  resolvedAt  DateTime? @map("resolved_at")
+
+  user        User?    @relation(fields: [userId], references: [id])
+  resolver    User?    @relation("AlertResolver", fields: [resolvedBy], references: [id])
+
+  @@index([status])
+  @@index([severity])
+  @@index([createdAt])
+  @@map("security_alerts")
+}
+
+model EncryptedMessage {
+  id               Int      @id @default(autoincrement())
+  messageId        Int      @unique @map("message_id")
+  encryptedContent String   @map("encrypted_content")
+  iv               String
+  tag              String
+  aad              String
+  fingerprint      String
+  keyVersion       Int      @default(1) @map("key_version")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  message          Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("encrypted_messages")
+}
+
+// Automation Workflow Model
+model AutomationWorkflow {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  userId      Int      @map("user_id")
+  triggers    Json     // Array of trigger configurations
+  actions     Json     // Array of action configurations
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User              @relation("UserAutomationWorkflows", fields: [userId], references: [id], onDelete: Cascade)
+  logs        AutomationLog[]
+
+  @@map("automation_workflows")
+}
+
+// Automation Log Model
+model AutomationLog {
+  id           Int      @id @default(autoincrement())
+  workflowId   Int      @map("workflow_id")
+  userId       Int      @map("user_id")
+  messageId    Int?     @map("message_id")
+  triggerType  String   @map("trigger_type")
+  actionType   String   @map("action_type")
+  status       String   // SUCCESS, FAILED, SKIPPED
+  executionTime Int     @map("execution_time") // milliseconds
+  metadata     Json?
+  errorMessage String?  @map("error_message")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  workflow     AutomationWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  user         User               @relation("UserAutomationLogs", fields: [userId], references: [id], onDelete: Cascade)
+  message      Message?           @relation("MessageAutomationLogs", fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@map("automation_logs")
+}
+
+// Lead Model for CRM Integration
+model Lead {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  conversationId Int?    @map("conversation_id")
+  name          String?
+  email         String?
+  phone         String?
+  company       String?
+  status        String   @default("NEW") // NEW, QUALIFIED, CONTACTED, CONVERTED, LOST
+  source        String   @default("AUTOMATION") // AUTOMATION, MANUAL, IMPORT
+  score         Int      @default(0) // Lead qualification score
+  notes         String?
+  metadata      Json?
+  assignedTo    Int?     @map("assigned_to")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user          User         @relation("UserLeads", fields: [userId], references: [id], onDelete: Cascade)
+  conversation  Conversation? @relation("ConversationLeads", fields: [conversationId], references: [id], onDelete: SetNull)
+  assignedUser  User?        @relation("AssignedLeads", fields: [assignedTo], references: [id], onDelete: SetNull)
+  followUps     FollowUp[]
+
+  @@map("leads")
+}
+
+// Follow-up Model
+model FollowUp {
+  id          Int      @id @default(autoincrement())
+  leadId      Int      @map("lead_id")
+  userId      Int      @map("user_id")
+  type        String   // EMAIL, CALL, MESSAGE, MEETING
+  status      String   @default("PENDING") // PENDING, COMPLETED, CANCELLED
+  scheduledAt DateTime @map("scheduled_at")
+  completedAt DateTime? @map("completed_at")
+  notes       String?
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user        User     @relation("UserFollowUps", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("follow_ups")
+}
+
+// Profile View tracking for market insights
+model ProfileView {
+  id            String   @id @default(cuid())
+  viewerId      Int?     @map("viewer_id") // null for anonymous views
+  viewedUserId  Int      @map("viewed_user_id")
+  ipAddress     String?  @map("ip_address")
+  userAgent     String?  @map("user_agent")
+  referrer      String?
+  duration      Int?     // seconds spent on profile
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  viewer      User? @relation("ProfileViewer", fields: [viewerId], references: [id], onDelete: SetNull)
+  viewedUser  User  @relation("ProfileViewed", fields: [viewedUserId], references: [id], onDelete: Cascade)
+
+  @@map("profile_views")
+}
+
+// Market Analytics data
+model MarketAnalytics {
+  id              String   @id @default(cuid())
+  userId          Int      @map("user_id")
+  date            DateTime @map("date") @db.Date
+  category        String?
+  region          String?
+  profileViews    Int      @default(0) @map("profile_views")
+  inquiries       Int      @default(0)
+  conversions     Int      @default(0)
+  revenue         Float    @default(0)
+  marketShare     Float    @default(0) @map("market_share")
+  competitorCount Int      @default(0) @map("competitor_count")
+  avgMarketPrice  Float    @default(0) @map("avg_market_price")
+  demandScore     Int      @default(0) @map("demand_score") // 0-100
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation("UserMarketAnalytics", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, category, region])
+  @@map("market_analytics")
+}
+
+// Booking model for service bookings
+model Booking {
+  id              Int      @id @default(autoincrement())
+  serviceId       Int      @map("service_id")
+  customerId      Int?     @map("customer_id")
+  providerId      Int      @map("provider_id")
+  bookingDate     DateTime @map("booking_date")
+  bookingTime     String   @map("booking_time")
+  duration        Int      // minutes
+  status          BookingStatus @default(PENDING)
+  totalAmount     Float    @map("total_amount")
+  paymentStatus   PaymentStatus @default(PENDING) @map("payment_status")
+  customerName    String   @map("customer_name")
+  customerEmail   String   @map("customer_email")
+  customerPhone   String?  @map("customer_phone")
+  specialRequests String?  @map("special_requests")
+  notes           String?
+  cancellationReason String? @map("cancellation_reason")
+  reminderSent24h Boolean  @default(false) @map("reminder_sent_24h")
+  reminderSent1h  Boolean  @default(false) @map("reminder_sent_1h")
+  paymentIntentId String?  @map("payment_intent_id")
+  paidAt          DateTime? @map("paid_at")
+  refundedAt      DateTime? @map("refunded_at")
+  paymentFailureReason String? @map("payment_failure_reason")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  service         Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  customer        User?    @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Cascade)
+  provider        User     @relation("ProviderBookings", fields: [providerId], references: [id], onDelete: Cascade)
+  review          ServiceReview?
+  payments        Payment[]
+  refunds         Refund[]
+
+  @@map("bookings")
+}
+
+// Service Review model
+model ServiceReview {
+  id          Int      @id @default(autoincrement())
+  serviceId   Int      @map("service_id")
+  bookingId   Int      @unique @map("booking_id")
+  customerId  Int      @map("customer_id")
+  providerId  Int      @map("provider_id")
+  rating      Int      // 1-5 stars
+  title       String?
+  comment     String?
+  response    String?  // Provider response
+  responseDate DateTime? @map("response_date")
+  isVerified  Boolean  @default(false) @map("is_verified")
+  isPublic    Boolean  @default(true) @map("is_public")
+  helpfulVotes Int     @default(0) @map("helpful_votes")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer    User     @relation("CustomerReviews", fields: [customerId], references: [id], onDelete: Cascade)
+  provider    User     @relation("ProviderReviews", fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@map("service_reviews")
+}
+
+// Enums for booking system
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIAL_REFUND
+}
+
+// Payment model for transaction records
+model Payment {
+  id              Int      @id @default(autoincrement())
+  bookingId       Int      @map("booking_id")
+  paymentIntentId String   @unique @map("payment_intent_id")
+  amount          Float
+  currency        String   @default("USD")
+  status          String   // COMPLETED, FAILED, PENDING
+  paymentMethod   String?  @map("payment_method") // card, bank_transfer, etc.
+  stripeChargeId  String?  @map("stripe_charge_id")
+  failureReason   String?  @map("failure_reason")
+  metadata        Json?    // Additional payment metadata
+  paidAt          DateTime? @map("paid_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  booking         Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  refunds         Refund[]
+
+  @@map("payments")
+}
+
+// Refund model for refund records
+model Refund {
+  id              Int      @id @default(autoincrement())
+  bookingId       Int      @map("booking_id")
+  paymentId       Int      @map("payment_id")
+  stripeRefundId  String   @unique @map("stripe_refund_id")
+  amount          Float
+  currency        String   @default("USD")
+  reason          String?
+  status          String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  metadata        Json?    // Additional refund metadata
+  processedAt     DateTime? @map("processed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  booking         Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  payment         Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@map("refunds")
+}
+
+// Payout model for provider earnings
+model Payout {
+  id              Int      @id @default(autoincrement())
+  providerId      Int      @map("provider_id")
+  amount          Float
+  currency        String   @default("USD")
+  status          String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  stripePayoutId  String?  @unique @map("stripe_payout_id")
+  bankAccount     String?  @map("bank_account") // Last 4 digits or account info
+  failureReason   String?  @map("failure_reason")
+  metadata        Json?    // Additional payout metadata
+  scheduledFor    DateTime? @map("scheduled_for")
+  processedAt     DateTime? @map("processed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  provider        User     @relation("ProviderPayouts", fields: [providerId], references: [id], onDelete: Cascade)
+  payoutItems     PayoutItem[]
+
+  @@map("payouts")
+}
+
+// Payout items for tracking individual payments in a payout
+model PayoutItem {
+  id              Int      @id @default(autoincrement())
+  payoutId        Int      @map("payout_id")
+  bookingId       Int      @map("booking_id")
+  paymentId       Int      @map("payment_id")
+  amount          Float    // Amount from this booking
+  platformFee     Float    @default(0) @map("platform_fee")
+  netAmount       Float    @map("net_amount") // Amount after platform fee
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  payout          Payout   @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+
+  @@map("payout_items")
+}
+
+// Enums
+enum VerificationType {
+  SMS_VERIFICATION
+  EMAIL_VERIFICATION
+  PHONE_VERIFICATION
+}
+
+// SMS Verification codes for phone number verification
+model VerificationCode {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  phone       String   @map("phone")
+  code        String   @map("code")
+  type        VerificationType @default(SMS_VERIFICATION) @map("type")
+  isUsed      Boolean  @default(false) @map("is_used")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("verification_codes")
+  @@index([userId])
+  @@index([phone, code])
+}
+

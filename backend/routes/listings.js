@@ -1,17 +1,15 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/db');
+const listingService = require('../services/listingService');
 const authMiddleware = require('../middleware/authMiddleware'); 
 
 // @route   GET /api/listings
 // @desc    Get all active business listings (add pagination later)
 // @access  Public
 router.get('/', async (req, res) => {
-  console.log('CORRECT GET /api/listings route is being executed NOW!'); // New distinct log
-  try {
-    // For now, fetch all active listings. Implement pagination and filtering later.
-    const listings = await db.query('SELECT * FROM business_listings WHERE is_active = TRUE ORDER BY created_at DESC');
-    res.json(listings.rows);
+    try {
+    const listings = await listingService.listActive();
+    res.json(listings);
   } catch (err) {
     console.error('Error fetching listings:', err.message);
     res.status(500).json({ msg: 'Server error while fetching listings.', error: err.message });
@@ -26,53 +24,24 @@ router.get('/my-listings', authMiddleware, async (req, res) => {
     const userId = req.user.id;
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
-    const offset = (page - 1) * limit;
     const category = req.query.category;
+    const sortBy = req.query.sortBy || 'createdAt';
+    const sortOrder = (req.query.sortOrder || 'desc').toLowerCase();
 
-    // Sorting parameters
-    const sortBy = req.query.sortBy || 'created_at'; // Default sort column
-    const sortOrder = (req.query.sortOrder || 'DESC').toUpperCase(); // Default sort order
-
-    // Whitelist for sortBy columns and sortOrder values to prevent SQL injection
-    const validSortBy = ['created_at', 'business_name', 'updated_at'];
-    const validSortOrder = ['ASC', 'DESC'];
-
+    // Basic validation for sortBy and sortOrder (prisma fields)
+    const validSortBy = ['createdAt', 'businessName', 'updatedAt'];
+    const validSortOrder = ['asc', 'desc'];
     if (!validSortBy.includes(sortBy) || !validSortOrder.includes(sortOrder)) {
       return res.status(400).json({ msg: 'Invalid sort parameters.' });
     }
 
-    let listingsQuery = 'SELECT * FROM business_listings WHERE user_id = $1';
-    let countQuery = 'SELECT COUNT(*) FROM business_listings WHERE user_id = $1';
-    const queryParams = [userId];
-    let paramIndex = 2;
-
-    if (category) {
-      listingsQuery += ` AND business_category = $${paramIndex}`;
-      countQuery += ` AND business_category = $${paramIndex}`;
-      queryParams.push(category);
-      paramIndex++;
-    }
-
-    // Add ORDER BY, LIMIT, and OFFSET
-    // Note: sortBy and sortOrder are validated and whitelisted, so direct concatenation is safe here.
-    listingsQuery += ` ORDER BY ${sortBy} ${sortOrder} LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
-    queryParams.push(limit, offset);
-
-    // Query to get paginated listings
-    const listingsResult = await db.query(listingsQuery, queryParams);
-
-    // Query to get total count of listings for the user (with filter)
-    // Remove limit and offset from queryParams for count query
-    const countQueryParams = [userId];
-    if (category) {
-      countQueryParams.push(category);
-    }
-    const totalCountResult = await db.query(countQuery, countQueryParams);
-
-    const totalCount = parseInt(totalCountResult.rows[0].count, 10);
+    const [listings, totalCount] = await Promise.all([
+      listingService.listForUser(userId, { page, limit, category, sortBy, sortOrder }),
+      listingService.countForUser(userId, category),
+    ]);
 
     res.json({
-      listings: listingsResult.rows,
+      listings,
       totalCount,
       currentPage: page,
       totalPages: Math.ceil(totalCount / limit),
@@ -88,20 +57,7 @@ router.get('/my-listings', authMiddleware, async (req, res) => {
 router.get('/stats', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
-
-    const statsResult = await db.query(
-      `SELECT 
-        SUM(CASE WHEN is_active = TRUE THEN 1 ELSE 0 END) as active_count,
-        SUM(CASE WHEN is_active = FALSE THEN 1 ELSE 0 END) as inactive_count
-      FROM business_listings WHERE user_id = $1`,
-      [userId]
-    );
-
-    const stats = {
-      activeCount: parseInt(statsResult.rows[0].active_count, 10) || 0,
-      inactiveCount: parseInt(statsResult.rows[0].inactive_count, 10) || 0,
-    };
-
+    const stats = await listingService.statsForUser(userId);
     res.json(stats);
   } catch (error) {
     console.error('Error fetching listing stats:', error);
@@ -109,32 +65,67 @@ router.get('/stats', authMiddleware, async (req, res) => {
   }
 });
 
-// @route   GET /api/listings/:id
-// @desc    Get a single business listing by ID
-// @access  Public
-router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const listing = await db.query('SELECT * FROM business_listings WHERE id = $1 AND is_active = TRUE', [id]);
-    if (listing.rows.length === 0) {
-      return res.status(404).json({ msg: 'Listing not found or not active.' });
-    }
-    res.json(listing.rows[0]);
-  } catch (err) {
-    console.error(`Error fetching listing ${id}:`, err.message);
-    // Check for invalid UUID format or other specific DB errors if needed
-    if (err.message.includes('invalid input syntax for type integer')) { // Or 'uuid' if your ID is UUID
-        return res.status(400).json({ msg: 'Invalid listing ID format.' });
-    }
-    res.status(500).json({ msg: 'Server error while fetching listing.', error: err.message });
-  }
-});
+
 
 // @route   POST /api/listings
 // @desc    Create a new business listing
 // @access  Private (requires authentication, only sellers)
 router.post('/', authMiddleware, async (req, res) => {
-  console.log('Received POST /api/listings request body:', req.body); // Added for debugging
+  const {
+    business_name,
+    business_category,
+    description,
+    country_of_origin,
+    target_markets,
+    contact_email,
+    contact_phone,
+    website_url,
+    logo_image_url,
+    gallery_image_urls,
+    subsector,
+    languages_spoken,
+    is_verified,
+    products_info,
+    is_active,
+  } = req.body;
+
+  // ensure seller
+  if (req.user.user_type !== 'seller') {
+    return res.status(403).json({ msg: 'Access denied. Only sellers can create listings.' });
+  }
+  if (!business_name || !business_category || !description || !country_of_origin) {
+    return res.status(400).json({ msg: 'VALIDATION_ERROR: Missing required fields.' });
+  }
+
+  const data = {
+    businessName: business_name,
+    businessCategory: business_category,
+    description,
+    countryOfOrigin: country_of_origin,
+    targetMarkets: target_markets || [],
+    contactEmail: contact_email,
+    contactPhone: contact_phone,
+    websiteUrl: website_url,
+    logoImageUrl: logo_image_url,
+    galleryImageUrls: gallery_image_urls,
+    subsector,
+    languagesSpoken: languages_spoken,
+    isVerified: is_verified,
+    productsInfo: products_info,
+    isActive: is_active,
+  };
+
+  try {
+    const created = await listingService.create(req.user.id, data);
+    res.status(201).json(created);
+  } catch (err) {
+    console.error('Error creating listing:', err);
+    res.status(500).json({ msg: 'Server error while creating listing.' });
+  }
+});
+
+/*
+  console.log('Received POST /api/listings request body:', req.body); // legacy debug
   const { 
     business_name,
     business_category,
@@ -169,7 +160,7 @@ router.post('/', authMiddleware, async (req, res) => {
   }
 
   try {
-    const newListingQuery = `
+    // legacy SQL removed = `
       INSERT INTO business_listings 
         (user_id, business_name, business_category, description, country_of_origin, 
          target_markets, contact_email, contact_phone, website_url, logo_image_url, gallery_image_urls,
@@ -198,18 +189,19 @@ router.post('/', authMiddleware, async (req, res) => {
     console.error('Error creating listing:', err.message);
     res.status(500).json({ msg: 'Server error while creating listing.', error: err.message });
   }
-});
+*/
 
-// @route   PUT /api/listings/:id
+// (Legacy raw SQL PUT/DELETE block removed)
+/*
+
 // @desc    Update an existing business listing
 // @access  Private (requires authentication, only owner can edit)
-router.put('/:id', authMiddleware, async (req, res) => {
-  const { id: listingId } = req.params;
-  const userId = req.user.id;
 
-  try {
-    // First, check if the listing exists and if the user owns it
-    const existingListingResult = await db.query('SELECT * FROM business_listings WHERE id = $1', [listingId]);
+
+
+  // legacy SQL block removed
+
+    // legacy code removed = await db.query('SELECT * FROM business_listings WHERE id = $1', [listingId]);
     if (existingListingResult.rows.length === 0) {
       return res.status(404).json({ msg: 'Listing not found.' });
     }
@@ -297,47 +289,8 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-// @route   DELETE /api/listings/:id
-// @desc    Delete a business listing
-// @access  Private (requires authentication, only owner can delete)
-router.delete('/:id', authMiddleware, async (req, res) => {
-  const { id: listingId } = req.params;
-  const userId = req.user.id;
 
-  try {
-    // First, check if the listing exists and if the user owns it
-    const existingListingResult = await db.query('SELECT user_id FROM business_listings WHERE id = $1', [listingId]);
-    if (existingListingResult.rows.length === 0) {
-      return res.status(404).json({ msg: 'Listing not found.' });
-    }
-
-    const listing = existingListingResult.rows[0];
-    if (listing.user_id !== userId) {
-      return res.status(403).json({ msg: 'Access denied. You do not own this listing.' });
-    }
-
-    // Ensure user is a seller
-    if (req.user.user_type !== 'seller') {
-      return res.status(403).json({ msg: 'Access denied. Only sellers can delete listings.' });
-    }
-
-    // Perform the delete operation
-    const deleteResult = await db.query('DELETE FROM business_listings WHERE id = $1 AND user_id = $2 RETURNING id', [listingId, userId]);
-
-    if (deleteResult.rowCount === 0) {
-      // This might happen if the listing was deleted by another request between the check and this operation,
-      // or if the user_id check within the DELETE query itself fails (though redundant due to prior checks).
-      return res.status(404).json({ msg: 'Listing not found or delete operation failed unexpectedly.' });
-    }
-
-    res.json({ msg: 'Listing deleted successfully.', deletedListingId: deleteResult.rows[0].id });
-
-  } catch (err) {
-    console.error('Error deleting listing:', err.message);
-    res.status(500).json({ msg: 'Server error while deleting listing.', error: err.message });
-  }
-});
-
+*/
 // @route   GET api/listings/:id
 // @desc    Get a single business listing by ID
 // @access  Public (or Private if you want to restrict who can view listings)
@@ -348,14 +301,13 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ msg: 'Invalid listing ID format.' });
     }
 
-    const query = 'SELECT * FROM business_listings WHERE id = $1';
-    const result = await db.query(query, [listingId]);
+    const listing = await listingService.getById(listingId);
 
-    if (result.rows.length === 0) {
+    if (!listing) {
       return res.status(404).json({ msg: 'Listing not found.' });
     }
 
-    res.json(result.rows[0]);
+    res.json(listing);
   } catch (err) {
     console.error('Error fetching listing by ID:', err.message);
     res.status(500).json({ msg: 'Server error while fetching listing.' });
@@ -366,8 +318,7 @@ router.get('/:id', async (req, res) => {
 // @route   PUT api/listings/:id
 // @desc    Update an existing business listing
 // @access  Private (only owner or admin should update)
-router.put('/:id', authMiddleware, async (req, res) => {
-  const listingId = parseInt(req.params.id, 10);
+/*
   if (isNaN(listingId)) {
     return res.status(400).json({ msg: 'Invalid listing ID format.' });
   }
@@ -392,7 +343,6 @@ router.put('/:id', authMiddleware, async (req, res) => {
   // Basic validation for required fields that are being updated
   if (!business_name || !business_category || !description || !country_of_origin) {
     return res.status(400).json({ msg: 'VALIDATION_ERROR: Business name, category, description, and country of origin are required.' });
-  }
 
   try {
     // First, verify the listing exists and the user owns it (or is an admin)
@@ -459,6 +409,49 @@ router.put('/:id', authMiddleware, async (req, res) => {
     console.error('Error updating listing:', err.message);
     // Check for specific PostgreSQL errors if needed, e.g., err.code
     res.status(500).json({ msg: 'Server error while updating listing.', error: err.message });
+  }
+*/
+// @route   GET /api/listings/:id
+// @desc    Get a single business listing by ID
+// @access  Public
+router.get('/:id', async (req, res) => {
+  try {
+    const listingId = parseInt(req.params.id, 10);
+    if (isNaN(listingId)) return res.status(400).json({ msg: 'Invalid listing ID.' });
+    const listing = await listingService.getById(listingId);
+    if (!listing) return res.status(404).json({ msg: 'Listing not found.' });
+    res.json(listing);
+  } catch (err) {
+    console.error('Error fetching listing by ID:', err);
+    res.status(500).json({ msg: 'Server error while fetching listing.' });
+  }
+});
+
+// ------------------ Prisma-based Update & Delete ------------------
+router.put('/:id', authMiddleware, async (req, res) => {
+  const listingId = Number(req.params.id);
+  if (Number.isNaN(listingId)) return res.status(400).json({ msg: 'Invalid listing ID.' });
+  if (req.user.user_type !== 'seller') return res.status(403).json({ msg: 'Only sellers can update listings.' });
+  try {
+    const updated = await listingService.update(listingId, req.user.id, req.body);
+    if (!updated) return res.status(404).json({ msg: 'Listing not found.' });
+    res.json(updated);
+  } catch (e) {
+    console.error('Error updating listing:', e);
+    res.status(500).json({ msg: 'Server error while updating listing.' });
+  }
+});
+
+router.delete('/:id', authMiddleware, async (req, res) => {
+  const listingId = Number(req.params.id);
+  if (Number.isNaN(listingId)) return res.status(400).json({ msg: 'Invalid listing ID.' });
+  if (req.user.user_type !== 'seller') return res.status(403).json({ msg: 'Only sellers can delete listings.' });
+  try {
+    await listingService.remove(listingId, req.user.id);
+    res.json({ msg: 'Listing deleted.' });
+  } catch (e) {
+    console.error('Error deleting listing:', e);
+    res.status(404).json({ msg: 'Listing not found.' });
   }
 });
 

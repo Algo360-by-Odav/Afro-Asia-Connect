@@ -1,19 +1,67 @@
 require('dotenv').config(); // Load environment variables at the very top
 const express = require('express');
+const path = require('path');
 const cookieParser = require('cookie-parser');
+const cors = require('cors');
+const http = require('http');
+const cron = require('node-cron');
+const reminderScheduler = require('./services/reminderScheduler');
 const authRoutes = require('./routes/auth'); // Import auth routes
 const listingRoutes = require('./routes/listings');
+const servicesRoutes = require('./routes/services');
 const leadRoutes = require('./routes/leads'); // Added leads routes // Import listing routes
 const subscriptionRoutes = require('./routes/subscriptions'); // Import subscription routes
-const notificationRoutes = require('./routes/notifications'); // Import notification routes
-const eventRoutes = require('./routes/events'); // Import event routes
+const notificationRoutes = require('./routes/notifications');
+const contactRoutes = require('./routes/contact');
+const companyRoutes = require('./routes/companies');
+const productRoutes = require('./routes/products'); // Import notification routes
+const eventRoutes = require('./routes/events');
+const uploadRoutes = require('./routes/upload'); // Import event routes
+const serviceRequestRoutes = require('./routes/serviceRequests');
+const consultationsRoutes = require('./routes/consultations');
+const providersRoutes = require('./routes/providers');
+const documentsRoutes = require('./routes/documents');
+const documentSharesRoutes = require('./routes/documentShares');
+const complianceRoutes = require('./routes/compliance');
+const messagingRoutes = require('./routes/messaging');
+const messageFilesRoutes = require('./routes/messageFiles');
+const messageTemplatesRoutes = require('./routes/messageTemplates');
+const scheduledMessagesRoutes = require('./routes/scheduledMessages');
+const groupChatsRoutes = require('./routes/groupChats');
+const analyticsRoutes = require('./routes/analytics');
+const aiRoutes = require('./routes/ai');
+const usersRoutes = require('./routes/users');
+const securityRoutes = require('./routes/security');
+const automationRoutes = require('./routes/automation');
+const advancedMessagingRoutes = require('./routes/advancedMessaging');
+const adminPanelRoutes = require('./routes/adminPanel');
+const marketInsightsRoutes = require('./routes/marketInsights');
+const billingRoutes = require('./routes/billing');
+const teamRoutes = require('./routes/team');
+const reviewsRoutes = require('./routes/reviews');
+const bookingsRoutes = require('./routes/bookings');
+const emailsRoutes = require('./routes/emails');
+const paymentsRoutes = require('./routes/payments');
+const smsRoutes = require('./routes/sms');
+const reminderJob = require('./jobs/reminderJob');
+const documentExpiryJob = require('./jobs/documentExpiryJob');
+const { startScheduledMessageJob } = require('./jobs/scheduledMessageJob');
+const { initializeSocket } = require('./socket/socketHandler');
 
-const app = express();
 const PORT = process.env.PORT || 3001; // Backend server port, now respects .env
+const app = express();
+const server = http.createServer(app);
+const io = initializeSocket(server);
+console.log('[WebSocket] Socket.IO initialized');
 
 // Middleware to parse JSON bodies and cookies
 app.use(cookieParser()); // Middleware to parse cookies
 app.use(express.json());
+// allow frontend on different port with credentials
+app.use(cors({ 
+  origin: ['http://localhost:3000', 'http://127.0.0.1:61259', 'http://10.0.2.2:3001'],
+  credentials: true 
+}));
 
 // A simple test route
 app.get('/', (req, res) => {
@@ -23,10 +71,48 @@ app.get('/', (req, res) => {
 // Authentication routes
 app.use('/api/auth', authRoutes);
 app.use('/api/listings', listingRoutes);
+app.use('/api/services', servicesRoutes);
 app.use('/api/leads', leadRoutes); 
 app.use('/api/subscriptions', subscriptionRoutes); 
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/companies', companyRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/service-requests', serviceRequestRoutes);
+app.use('/api/consultations', consultationsRoutes);
+app.use('/api/providers', providersRoutes);
+app.use('/api/documents', documentsRoutes);
+app.use('/api/document-shares', documentSharesRoutes);
+app.use('/api/compliance', complianceRoutes);
+app.use('/api/messaging', messagingRoutes);
+app.use('/api/message-files', messageFilesRoutes);
+app.use('/api/message-templates', messageTemplatesRoutes);
+app.use('/api/scheduled-messages', scheduledMessagesRoutes);
+app.use('/api/group-chats', groupChatsRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/security', securityRoutes);
+app.use('/api/automation', automationRoutes);
+app.use('/api/advanced-messaging', advancedMessagingRoutes);
+app.use('/api/admin', adminPanelRoutes);
+app.use('/api/market-insights', marketInsightsRoutes);
+app.use('/api/billing', billingRoutes);
+app.use('/api/team', teamRoutes);
+app.use('/api/reviews', reviewsRoutes);
+app.use('/api/bookings', bookingsRoutes);
+app.use('/api/emails', emailsRoutes);
+app.use('/api/payments', paymentsRoutes);
+app.use('/api/sms', smsRoutes);
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve uploaded files statically
+
+// Start cron jobs
+reminderJob.start();
+documentExpiryJob.start();
+startScheduledMessageJob();
+console.log('📅 Cron jobs started');
 
 // Global error handlers - place them before app.listen
 process.on('unhandledRejection', (reason, promise) => {
@@ -42,8 +128,21 @@ process.on('uncaughtException', (error) => {
 });
 
 // Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📊 Dashboard available at http://localhost:${PORT}`);
+    console.log(`🔌 WebSocket server ready`);
+    console.log(`⏰ Cron jobs initialized`);
+    
+    // Start the reminder scheduler
+    try {
+      reminderScheduler.start();
+      console.log(`📧 Email reminder scheduler started`);
+    } catch (error) {
+      console.error('❌ Failed to start reminder scheduler:', error.message);
+    }
+  });
+}
 
-module.exports = app; // Export for potential testing
+module.exports = { app, server }; // Export for potential testing

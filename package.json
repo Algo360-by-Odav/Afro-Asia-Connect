@@ -1,0 +1,26 @@
+{
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-community/netinfo": "^11.4.1",
+    "@react-navigation/bottom-tabs": "^7.4.5",
+    "@react-navigation/native": "^7.1.17",
+    "@react-navigation/stack": "^7.4.5",
+    "@reduxjs/toolkit": "^2.8.2",
+    "axios": "^1.11.0",
+    "react-native-device-info": "^14.0.4",
+    "react-native-elements": "^3.4.3",
+    "react-native-gesture-handler": "^2.27.2",
+    "react-native-keychain": "^10.0.0",
+    "react-native-paper": "^5.14.5",
+    "react-native-safe-area-context": "^5.5.2",
+    "react-native-screens": "^4.13.1",
+    "react-native-svg": "^15.12.1",
+    "react-native-vector-icons": "^10.3.0",
+    "react-redux": "^9.2.0",
+    "redux-persist": "^6.0.0"
+  },
+  "devDependencies": {
+    "@react-native-community/cli": "^19.1.1",
+    "@types/react-native-vector-icons": "^6.4.18"
+  }
+}

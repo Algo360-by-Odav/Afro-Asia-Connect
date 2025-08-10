@@ -1,54 +1,107 @@
 const express = require('express');
 const bcrypt = require('bcryptjs'); // Already present, ensure it is
 const jwt = require('jsonwebtoken');
-const db = require('../config/db');
+// const db = require('../config/db'); // replaced by Prisma
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 require('dotenv').config({ path: '../.env' });
-const authMiddleware = require('../middleware/authMiddleware'); // Added for /me route // Ensure .env is loaded relative to this file's execution if needed directly
+const { authenticateToken } = require('../middleware/authMiddleware'); // Added for /me route // Ensure .env is loaded relative to this file's execution if needed directly
 
 const router = express.Router();
 
-// User Registration Route
+// Helper function to map Prisma role to legacy user_type
+const mapRoleToUserType = (role) => {
+  switch (role) {
+    case 'SERVICE_PROVIDER':
+      return 'service_provider';
+    case 'CUSTOMER':
+      return 'customer';
+    case 'ADMIN':
+      return 'admin';
+    default:
+      return 'customer';
+  }
+};
+
+
+
+
+// ----- Prisma-based User Registration Route -----
 router.post('/register', async (req, res) => {
-  const { email, password, user_type, first_name, last_name } = req.body;
+  console.log('[/register] Raw request body:', req.body);
+  // Accept either role or user_type from client; default to BUYER
+  const { email, password, role: roleInput, user_type, firstName, lastName } = req.body;
+  let normalizedRole = (user_type || roleInput || 'BUYER').toUpperCase();
+  
+  // Map mobile app roles to database enum values
+  if (normalizedRole === 'CUSTOMER') normalizedRole = 'BUYER';
+  if (normalizedRole === 'SELLER') normalizedRole = 'SUPPLIER';
+  // SERVICE_PROVIDER remains as SERVICE_PROVIDER
+  
 
   // Basic validation
-  if (!email || !password || !user_type) {
-    return res.status(400).json({ msg: 'Please enter email, password, and user type.' });
+  if (!email || !password) {
+    return res.status(400).json({ msg: 'Please enter both email and password.' });
   }
 
-  // Check for existing user
   try {
-    const userCheck = await db.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (userCheck.rows.length > 0) {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
       return res.status(400).json({ msg: 'User already exists with this email.' });
     }
 
     // Hash password
     const salt = await bcrypt.genSalt(10);
-    const password_hash = await bcrypt.hash(password, salt);
+    const hashed = await bcrypt.hash(password, salt);
 
+    console.log('[/register] Creating user with role:', normalizedRole);
     // Insert new user
-    const newUserQuery = `
-      INSERT INTO users (email, password_hash, user_type, first_name, last_name)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, email, user_type, created_at;
-    `;
-    const newUser = await db.query(newUserQuery, [email, password_hash, user_type, first_name, last_name]);
-
-    // For now, just return success and user info (excluding password)
-    // We will add JWT generation in the next step for login
-    res.status(201).json({
-      msg: 'User registered successfully.',
-      user: newUser.rows[0]
+    // create user via Prisma
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashed,
+        role: normalizedRole,
+        firstName,
+        lastName,
+      },
+      select: { id: true, email: true, role: true, createdAt: true },
     });
 
+    // Generate JWT token for immediate login after registration
+    const payload = {
+      user: {
+        id: user.id,
+        email: user.email,
+        user_type: mapRoleToUserType(user.role),
+        is_admin: user.isAdmin
+      }
+    };
+    
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '5h' });
+    
+    return res.status(201).json({
+      success: true,
+      data: {
+        token: token,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          user_type: mapRoleToUserType(user.role)
+        }
+      },
+      message: 'User registered successfully.'
+    });
   } catch (err) {
     console.error('Error during registration:', err.message);
     res.status(500).json({ msg: 'Server error during registration.', error: err.message });
   }
 });
 
-// User Login Route
+// ----- Prisma-based User Login Route -----
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -59,15 +112,13 @@ router.post('/login', async (req, res) => {
 
   try {
     // Check if user exists
-    const userResult = await db.query('SELECT * FROM users WHERE email = $1 AND is_active = TRUE', [email]);
-    if (userResult.rows.length === 0) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || user.isActive === false) {
       return res.status(400).json({ msg: 'Invalid credentials or user not found.' });
     }
 
-    const user = userResult.rows[0];
-
     // Compare password
-    const isMatch = await bcrypt.compare(password, user.password_hash);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ msg: 'Invalid credentials.' });
     }
@@ -77,8 +128,8 @@ router.post('/login', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        user_type: user.user_type,
-        is_admin: user.is_admin // Added is_admin to JWT payload
+        user_type: mapRoleToUserType(user.role),
+        is_admin: user.isAdmin // Added is_admin to JWT payload
       }
     };
 
@@ -101,20 +152,23 @@ router.post('/login', async (req, res) => {
           path: '/' // Cookie is accessible from all paths
         });
 
-        // Send response with user data (token can also be included here if frontend needs it directly)
+        // Send response with user data in format expected by mobile app
         res.json({
-          // We can still send the token in the body if the client needs to access it immediately 
-          // for non-HTTP-only purposes, or for easier state management without re-fetching user. 
-          // However, the primary auth mechanism for subsequent requests protected by middleware will be the cookie.
-          token: token, 
-          user: {
-            id: user.id,
-            email: user.email,
-            user_type: user.user_type,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            is_verified: user.is_verified,
-            is_admin: user.is_admin // Added is_admin to user object in response
+          success: true,
+          data: {
+            token: token,
+            user: {
+              id: user.id,
+              email: user.email,
+              role: user.role,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              user_type: mapRoleToUserType(user.role),
+              first_name: user.firstName,
+              last_name: user.lastName,
+              is_verified: user.isActive,
+              isAdmin: user.isAdmin
+            }
           }
         });
       }
@@ -142,47 +196,36 @@ router.post('/logout', (req, res) => {
 // @route   GET /api/auth/me
 // @desc    Get current logged-in user's data (verify token)
 // @access  Private (requires token)
-router.get('/me', authMiddleware, async (req, res) => {
+router.get('/me', authenticateToken, async (req, res) => {
   try {
     // authMiddleware has already populated req.user if token is valid
-    // We might want to fetch the latest user data from DB to ensure it's fresh
-    // Attempt to fetch user details along with subscription information
-    // This assumes 'users' table has 'current_subscription_plan_id', 'subscription_status', 'subscription_expires_at'
-    // And a 'subscription_plans' table has 'id', 'name', 'features' (e.g., JSON array of strings)
-    const userQuery = `
-      SELECT 
-        u.id, u.email, u.user_type, u.first_name, u.last_name, u.is_verified, 
-        u.created_at, u.updated_at,
-        sp.name AS subscription_plan_name,
-        u.subscription_status,
-        sp.features AS subscription_plan_features,
-        u.subscription_expires_at
-      FROM users u
-      LEFT JOIN subscription_plans sp ON u.current_subscription_plan_id = sp.id
-      WHERE u.id = $1;
-    `;
-    const userResult = await db.query(userQuery, [req.user.id]);
+    // Fetch the latest user data from DB using Prisma
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id }
+    });
 
-    if (userResult.rows.length === 0) {
-      // This case should ideally not happen if authMiddleware passed and user ID is from a valid token,
-      // but it's a good safeguard (e.g., user deleted/deactivated after token issuance)
+    if (!user || !user.isActive) {
       return res.status(404).json({ msg: 'User not found or not active.' });
     }
 
-    const userData = userResult.rows[0];
-    // Ensure features are parsed if stored as JSON string, default to empty array if null/undefined
-    if (userData && userData.subscription_plan_features && typeof userData.subscription_plan_features === 'string') {
-      try {
-        userData.subscription_plan_features = JSON.parse(userData.subscription_plan_features);
-      } catch (e) {
-        console.error('Failed to parse subscription_plan_features JSON:', e);
-        userData.subscription_plan_features = []; // Default to empty array on parse error
+    // Return user data in expected format
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        user_type: mapRoleToUserType(user.role),
+        first_name: user.firstName,
+        last_name: user.lastName,
+        is_verified: user.isActive,
+        isAdmin: user.isAdmin,
+        created_at: user.createdAt,
+        updated_at: user.updatedAt
       }
-    } else if (userData && !userData.subscription_plan_features) {
-        userData.subscription_plan_features = []; // Default if null/undefined
-    }
-
-    res.json(userData);
+    });
   } catch (error) {
     console.error('Error in /api/auth/me route:', error.message);
     res.status(500).json({ msg: 'Server error while fetching user data.' });
@@ -192,7 +235,7 @@ router.get('/me', authMiddleware, async (req, res) => {
 // @route   PUT /api/auth/me
 // @desc    Update current logged-in user's profile (first_name, last_name)
 // @access  Private (requires token)
-router.put('/me', authMiddleware, async (req, res) => {
+router.put('/me', authenticateToken, async (req, res) => {
   const { first_name, last_name } = req.body;
   const userId = req.user.id; // From authMiddleware
 
@@ -225,7 +268,7 @@ router.put('/me', authMiddleware, async (req, res) => {
 // @route   POST /api/auth/change-password
 // @desc    Change user password
 // @access  Private
-router.post('/change-password', authMiddleware, async (req, res) => {
+router.post('/change-password', authenticateToken, async (req, res) => {
   const { currentPassword, newPassword, confirmNewPassword } = req.body;
   const userId = req.user.id;
 
@@ -268,6 +311,126 @@ router.post('/change-password', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Error changing password:', error.message);
     res.status(500).json({ msg: 'Server error while changing password.' });
+  }
+});
+
+
+// ----- Google OAuth 2.0 Callback -----
+// Frontend initiates flow; Google redirects to `${GOOGLE_REDIRECT_URI}` which should point to this endpoint
+// Example .env entries:
+//   GOOGLE_CLIENT_ID=...
+//   GOOGLE_CLIENT_SECRET=...
+//   GOOGLE_REDIRECT_URI=http://localhost:4000/api/auth/google/callback
+
+router.get('/google/callback', async (req, res) => {
+  const { code, error } = req.query;
+  if (error) return res.status(400).json({ msg: 'Google OAuth error', error });
+  if (!code) return res.status(400).json({ msg: 'Missing authorization code.' });
+
+  const {
+    GOOGLE_CLIENT_ID: client_id,
+    GOOGLE_CLIENT_SECRET: client_secret,
+    GOOGLE_REDIRECT_URI: redirect_uri,
+    JWT_SECRET,
+  } = process.env;
+
+  if (!client_id || !client_secret || !redirect_uri) {
+    return res.status(500).json({ msg: 'Google OAuth environment variables not configured.' });
+  }
+
+  try {
+    // Exchange code for tokens
+    const tokenResp = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id,
+        client_secret,
+        redirect_uri,
+        grant_type: 'authorization_code',
+      }),
+    });
+    const tokenData = await tokenResp.json();
+    if (!tokenResp.ok) {
+      console.error('Google token exchange error', tokenData);
+      return res.status(500).json({ msg: 'Failed to exchange code for token', error: tokenData });
+    }
+
+    const { access_token, id_token } = tokenData;
+
+    // Fetch user info
+    const userResp = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+    const profile = await userResp.json();
+    if (!userResp.ok) {
+      console.error('Google userinfo error', profile);
+      return res.status(500).json({ msg: 'Failed to fetch user profile', error: profile });
+    }
+
+    const { email, given_name: firstName, family_name: lastName, picture } = profile;
+    if (!email) return res.status(500).json({ msg: 'Email not provided by Google.' });
+
+    // Upsert user in DB
+    let user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          password: '', // password not set for social login
+          role: 'BUYER',
+          firstName: firstName || '',
+          lastName: lastName || '',
+          avatarUrl: picture || null,
+          isVerified: true,
+        },
+      });
+    }
+
+    // Sign JWT
+    const payload = { user: { id: user.id, email: user.email, user_type: mapRoleToUserType(user.role) } };
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '5h' });
+
+    // Set cookie for session auth
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 5 * 60 * 60 * 1000,
+      path: '/',
+    });
+
+    // Decide redirect
+    const finalRedirect = process.env.OAUTH_SUCCESS_REDIRECT || '/';
+    return res.redirect(finalRedirect);
+  } catch (err) {
+    console.error('Google OAuth callback error', err);
+    return res.status(500).json({ msg: 'Google OAuth processing failed', error: err.message });
+  }
+});
+
+// @route   GET /api/auth/config
+// @desc    Get environment configuration for frontend
+// @access  Public
+router.get('/config', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        environment: process.env.NODE_ENV || 'development',
+        apiUrl: process.env.API_URL || 'http://localhost:3001',
+        frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+        features: {
+          emailEnabled: !!process.env.EMAIL_USER,
+          smsEnabled: !!process.env.TWILIO_ACCOUNT_SID,
+          paymentsEnabled: !!process.env.STRIPE_SECRET_KEY,
+          analyticsEnabled: true
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error in /api/auth/config route:', error.message);
+    res.status(500).json({ msg: 'Server error while fetching config.' });
   }
 });
 

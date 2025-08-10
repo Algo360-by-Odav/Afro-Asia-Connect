@@ -1,272 +1,159 @@
-// Test suite for Listings API
+// Listings API integration tests (Express router)
+// Clean rewrite – mocks service layer, not Prisma. All tests align with actual route behaviour.
+
 const request = require('supertest');
 const express = require('express');
-const listingsRouter = require('./listings'); 
-const authMiddleware = require('../middleware/authMiddleware');
 
-// Mock the authMiddleware to bypass actual authentication for most tests
+// ------- Mock the listing service layer ---------
+const mockListingService = {
+  listActive: jest.fn(),
+  getById: jest.fn(),
+  create: jest.fn(),
+  update: jest.fn(),
+  remove: jest.fn(),
+};
+jest.mock('../services/listingService', () => mockListingService);
+
+// ------- Auth middleware mock with toggle ---------
+let mockAuthEnabled = true;
 jest.mock('../middleware/authMiddleware', () => jest.fn((req, res, next) => {
-  req.user = { id: 'test-user-id', user_type: 'seller' }; 
-  next();
+  if (!mockAuthEnabled) {
+    return res.status(401).json({ msg: 'Not authenticated' });
+  }
+  req.user = { id: 'test-user-id', user_type: 'seller' };
+  return next();
 }));
 
-// Mock the database module
-const mockQuery = jest.fn();
-jest.mock('../config/db', () => ({
-  query: mockQuery,
-  // Mock pool.connect if your app uses it directly, though typically not needed if only router is tested
-  // connect: jest.fn().mockResolvedValue({ query: mockQuery, release: jest.fn() })
-}));
+// Router under test
+const listingsRouter = require('./listings');
 
+// Express app setup
 const app = express();
-app.use(express.json()); // Ensure app can parse JSON body
+app.use(express.json());
 app.use('/api/listings', listingsRouter);
 
-describe('Listings API', () => {
-  beforeEach(() => {
-    // Clear all instances and calls to constructor and all methods: 
-    mockQuery.mockClear();
-    // Ensure the mock implementation is reset if it was changed in a test
-    jest.mock('../middleware/authMiddleware', () => jest.fn((req, res, next) => {
-      req.user = { id: 'test-user-id', user_type: 'seller' }; 
-      next();
-    }));
-  });
+// ------- Test data ---------
+const baseListing = {
+  id: '123',
+  businessName: 'Test Biz',
+  businessCategory: 'Tech',
+  description: 'Lorem ipsum',
+  countryOfOrigin: 'Wonderland',
+  targetMarkets: ['Global'],
+  contactEmail: 'test@example.com',
+  contactPhone: '111111',
+  websiteUrl: 'http://example.com',
+  logoImageUrl: 'logo.png',
+  galleryImageUrls: ['g1.png'],
+  subsector: 'Software',
+  languagesSpoken: ['English'],
+  isActive: true,
+  isVerified: false,
+  productsInfo: [],
+  userId: 'test-user-id',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
 
-  describe('GET /api/listings/:id', () => {
-    it('should return a 404 if listing not found', async () => {
-      mockQuery.mockResolvedValueOnce({ rows: [] }); 
-      const response = await request(app).get('/api/listings/nonexistentid');
-      expect(response.statusCode).toBe(404);
-      expect(response.body.msg).toContain('Listing not found');
-    });
+const newListingBody = {
+  business_name: 'New Biz',
+  business_category: 'Retail',
+  description: 'Desc',
+  country_of_origin: 'Newland',
+};
 
-    it('should return a listing if found, including new fields', async () => {
-      const mockListing = {
-        id: '123',
-        business_name: 'Test Business',
-        business_category: 'Tech',
-        description: 'A test business description.',
-        country_of_origin: 'Testland',
-        target_markets: ['Global'],
-        contact_email: 'test@example.com',
-        contact_phone: '1234567890',
-        website_url: 'http://example.com',
-        logo_image_url: 'http://example.com/logo.png',
-        gallery_image_urls: ['http://example.com/img1.png'],
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: 'test-user-id',
-        subsector: 'Software',
-        languages_spoken: ['English', 'Testish'],
-        is_verified: true,
-        products_info: [{ name: 'Test Product', images: [], specifications: 'Specs', moq: '10' }]
-      };
-      mockQuery.mockResolvedValueOnce({ rows: [mockListing] });
-
-      const response = await request(app).get('/api/listings/123');
-      
-      expect(response.statusCode).toBe(200);
-      expect(response.body).toEqual(mockListing);
-      expect(mockQuery).toHaveBeenCalledWith(expect.stringContaining('SELECT * FROM business_listings WHERE id = $1'), ['123']);
-    });
-
-    it('should return 500 if database error occurs', async () => {
-      mockQuery.mockRejectedValueOnce(new Error('DB error'));
-      const response = await request(app).get('/api/listings/123');
-      expect(response.statusCode).toBe(500);
-      expect(response.body.msg).toContain('Server error');
-    });
-  });
+const newListingData = {
+  businessName: 'New Biz',
+  businessCategory: 'Retail',
+  description: 'Desc',
+  countryOfOrigin: 'Newland',
+};
 
 
-  describe('POST /api/listings', () => {
-    const newListingData = {
-      business_name: 'New Test Biz',
-      business_category: 'Retail',
-      description: 'A brand new test business.',
-      country_of_origin: 'Newland',
-      target_markets: ['Local', 'Online'],
-      contact_email: 'newbiz@example.com',
-      contact_phone: '0987654321',
-      website_url: 'http://newbiz.example.com',
-      logo_image_url: 'http://newbiz.example.com/logo.png',
-      gallery_image_urls: ['http://newbiz.example.com/img1.png'],
-      // New fields
-      subsector: 'Online Retail',
-      languages_spoken: ['English', 'Newlandish'],
-      is_verified: false,
-      products_info: JSON.stringify([{ name: 'New Product', images: [], specifications: 'New Specs', moq: '5' }]) // products_info is expected as JSON string by backend
-    };
 
-    it('should create a new listing and return it, including new fields', async () => {
-      const expectedCreatedListing = {
-        id: 'new-id-123', // Simulate DB returning an ID
-        ...newListingData,
-        products_info: JSON.parse(newListingData.products_info), // Backend returns it parsed
-        user_id: 'test-user-id', // from mock authMiddleware
-        is_active: true, // Default value from DB or backend logic
-        created_at: new Date().toISOString(), // Simulate DB timestamp
-        updated_at: new Date().toISOString()  // Simulate DB timestamp
-      };
-      // Mock the DB query for INSERT
-      // The actual query in listings.js returns the newly created row using 'RETURNING *'
-      mockQuery.mockResolvedValueOnce({ rows: [expectedCreatedListing] });
+const updateData = { description: 'Updated' };
 
-      const response = await request(app)
-        .post('/api/listings')
-        .send(newListingData);
-
-      expect(response.statusCode).toBe(201);
-      // Compare relevant fields, as timestamps might differ slightly
-      expect(response.body).toMatchObject({
-        ...newListingData,
-        products_info: JSON.parse(newListingData.products_info),
-        user_id: 'test-user-id',
-        is_active: true,
-      });
-      expect(response.body.id).toBe('new-id-123');
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO business_listings'),
-        expect.arrayContaining([
-          'test-user-id', // user_id from mock auth
-          newListingData.business_name,
-          newListingData.business_category,
-          newListingData.description,
-          newListingData.country_of_origin,
-          newListingData.target_markets,
-          newListingData.contact_email,
-          newListingData.contact_phone,
-          newListingData.website_url,
-          newListingData.logo_image_url,
-          newListingData.gallery_image_urls,
-          newListingData.subsector,
-          newListingData.languages_spoken,
-          newListingData.is_verified,
-          newListingData.products_info // Sent as JSON string
-        ])
-      );
-    });
-
-    it('should return 401 if user is not authenticated (actual middleware test)', async () => {
-      // Override the global mock for this specific test
-      jest.mock('../middleware/authMiddleware', () => jest.fn((req, res, next) => {
-        // Simulate no authenticated user
-        return res.status(401).json({ msg: 'No token, authorization denied' });
-      }));
-      // Re-require the router to use the new mock for this test scope if needed, or ensure app is re-initialized
-      // For simplicity, we assume the mock is picked up. A more robust way would be to re-init app or router.
-      const tempApp = express();
-      tempApp.use(express.json());
-      const freshListingsRouter = require('./listings'); // Re-require to get fresh middleware application
-      tempApp.use('/api/listings', freshListingsRouter);
-
-      const response = await request(tempApp)
-        .post('/api/listings')
-        .send(newListingData);
-      expect(response.statusCode).toBe(401);
-    });
-
-    it('should return 500 if database error occurs during creation', async () => {
-      mockQuery.mockRejectedValueOnce(new Error('DB insert error'));
-      const response = await request(app)
-        .post('/api/listings')
-        .send(newListingData);
-      expect(response.statusCode).toBe(500);
-      expect(response.body.msg).toContain('Server error');
-    });
-  });
-
-
-  describe('PUT /api/listings/:id', () => {
-    const existingListingId = 'existing-id-456';
-    const updateData = {
-      business_name: 'Updated Test Biz',
-      business_category: 'Services',
-      description: 'An updated test business description.',
-      subsector: 'Consulting',
-      languages_spoken: ['English', 'Updatedish'],
-      is_verified: true,
-      products_info: JSON.stringify([{ name: 'Updated Product', images: ['newimage.png'], specifications: 'Updated Specs', moq: '20' }])
-    };
-
-    it('should update an existing listing and return it, including new fields', async () => {
-      const mockUpdatedListing = {
-        id: existingListingId,
-        ...updateData,
-        products_info: JSON.parse(updateData.products_info),
-        user_id: 'test-user-id', // Assuming the original listing belonged to this user
-        // Other fields like created_at, country_of_origin etc. would remain or be fetched
-        created_at: new Date().toISOString(), 
-        updated_at: new Date().toISOString() 
-      };
-      // Mock DB query for UPDATE: first SELECT to check ownership (if implemented, mock it), then UPDATE
-      // For simplicity, assuming auth middleware handles ownership or it's checked before DB update in route
-      // The route currently returns the updated listing using 'RETURNING *'
-      mockQuery.mockResolvedValueOnce({ rows: [mockUpdatedListing] }); // Mock for RETURNING *
-
-      const response = await request(app)
-        .put(`/api/listings/${existingListingId}`)
-        .send(updateData);
-
-      expect(response.statusCode).toBe(200);
-      expect(response.body).toMatchObject({
-        id: existingListingId,
-        ...updateData,
-        products_info: JSON.parse(updateData.products_info),
-        user_id: 'test-user-id'
-      });
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.stringContaining('UPDATE business_listings SET'),
-        expect.arrayContaining([
-          updateData.business_name,
-          updateData.business_category,
-          updateData.description,
-          updateData.subsector,
-          updateData.languages_spoken,
-          updateData.is_verified,
-          updateData.products_info, // Sent as JSON string
-          existingListingId,
-          'test-user-id' // For WHERE id = $N AND user_id = $M
-        ])
-      );
-    });
-
-    it('should return 404 if listing to update is not found', async () => {
-      mockQuery.mockResolvedValueOnce({ rows: [] }); // Simulate DB not finding the row to update
-      const response = await request(app)
-        .put('/api/listings/nonexistentid999')
-        .send(updateData);
-      expect(response.statusCode).toBe(404);
-      expect(response.body.msg).toContain('Listing not found or user not authorized'); // Current msg in route
-    });
-
-    it('should return 401 if user is not authenticated (actual middleware test)', async () => {
-      jest.mock('../middleware/authMiddleware', () => jest.fn((req, res, next) => {
-        return res.status(401).json({ msg: 'No token, authorization denied' });
-      }));
-      const tempApp = express(); // Re-initialize app with new mock for this test
-      tempApp.use(express.json());
-      const freshListingsRouter = require('./listings');
-      tempApp.use('/api/listings', freshListingsRouter);
-
-      const response = await request(tempApp)
-        .put(`/api/listings/${existingListingId}`)
-        .send(updateData);
-      expect(response.statusCode).toBe(401);
-    });
-
-    it('should return 500 if database error occurs during update', async () => {
-      mockQuery.mockRejectedValueOnce(new Error('DB update error'));
-      const response = await request(app)
-        .put(`/api/listings/${existingListingId}`)
-        .send(updateData);
-      expect(response.statusCode).toBe(500);
-      expect(response.body.msg).toContain('Server error');
-    });
-  });
-
-  // TODO: Add tests for DELETE /api/listings/:id
-
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockAuthEnabled = true;
 });
+
+// --------------- Tests -----------------
+describe('GET /api/listings', () => {
+  it('returns all active listings', async () => {
+    mockListingService.listActive.mockResolvedValueOnce([baseListing]);
+
+    const res = await request(app).get('/api/listings');
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual([baseListing]);
+    expect(mockListingService.listActive).toHaveBeenCalled();
+  });
+
+  it('handles service errors', async () => {
+    mockListingService.listActive.mockRejectedValueOnce(new Error('DB'));
+    const res = await request(app).get('/api/listings');
+    expect(res.statusCode).toBe(500);
+  });
+});
+
+describe('GET /api/listings/:id', () => {
+  it('returns listing by id', async () => {
+    mockListingService.getById.mockResolvedValueOnce(baseListing);
+    const res = await request(app).get(`/api/listings/${baseListing.id}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual(baseListing);
+  });
+
+  it('404 when not found', async () => {
+    mockListingService.getById.mockResolvedValueOnce(null);
+    const res = await request(app).get('/api/listings/999');
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+describe('POST /api/listings', () => {
+  it('creates listing when authenticated', async () => {
+    mockListingService.create.mockResolvedValueOnce({ id: 'new', userId: 'test-user-id', ...newListingData });
+    const res = await request(app).post('/api/listings').send(newListingBody);
+    expect(res.statusCode).toBe(201);
+    expect(mockListingService.create).toHaveBeenCalledWith('test-user-id', expect.objectContaining(newListingData));
+  });
+
+  it('401 when unauthenticated', async () => {
+    mockAuthEnabled = false;
+    const res = await request(app).post('/api/listings').send(newListingBody);
+    expect(res.statusCode).toBe(401);
+  });
+});
+
+describe('PUT /api/listings/:id', () => {
+  it('updates listing for owner', async () => {
+    mockListingService.update.mockResolvedValueOnce({ ...baseListing, ...updateData });
+    const res = await request(app).put(`/api/listings/${baseListing.id}`).send(updateData);
+    expect(res.statusCode).toBe(200);
+    expect(mockListingService.update).toHaveBeenCalledWith(Number(baseListing.id), 'test-user-id', updateData);
+  });
+
+  it('404 when not found', async () => {
+    mockListingService.update.mockResolvedValueOnce(null);
+    const res = await request(app).put('/api/listings/999').send(updateData);
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+describe('DELETE /api/listings/:id', () => {
+  it('deletes listing', async () => {
+    mockListingService.remove.mockResolvedValueOnce(baseListing);
+    const res = await request(app).delete(`/api/listings/${baseListing.id}`);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.msg).toBe('Listing deleted.');
+    expect(mockListingService.remove).toHaveBeenCalledWith(Number(baseListing.id), 'test-user-id');
+  });
+
+  it('404 on service error', async () => {
+    mockListingService.remove.mockRejectedValueOnce(new Error('err'));
+    const res = await request(app).delete(`/api/listings/${baseListing.id}`);
+    expect(res.statusCode).toBe(404);
+  });
+});
+
