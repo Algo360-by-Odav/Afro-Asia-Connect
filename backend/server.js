@@ -145,4 +145,12 @@ if (require.main === module) {
   });
 }
 
+// Start server (required for Railway deployment)
+const PORT = process.env.PORT || 3001;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 AfroAsiaConnect API server running on port ${PORT}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🗄️ Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
+});
+
 module.exports = { app, server }; // Export for potential testing
