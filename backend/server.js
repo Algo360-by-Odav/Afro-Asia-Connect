@@ -127,10 +127,14 @@ process.on('uncaughtException', (error) => {
   process.exit(1); // Exiting after an uncaught exception is often a good practice
 });
 
-// Start the server
+// Start server (production-ready configuration)
+const PORT = process.env.PORT || 3001;
+
 if (require.main === module) {
-  server.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 AfroAsiaConnect API server running on port ${PORT}`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🗄️ Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
     console.log(`📊 Dashboard available at http://localhost:${PORT}`);
     console.log(`🔌 WebSocket server ready`);
     console.log(`⏰ Cron jobs initialized`);
@@ -144,13 +148,5 @@ if (require.main === module) {
     }
   });
 }
-
-// Start server (required for Railway deployment)
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 AfroAsiaConnect API server running on port ${PORT}`);
-  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🗄️ Database: ${process.env.DATABASE_URL ? 'Connected' : 'Not configured'}`);
-});
 
 module.exports = { app, server }; // Export for potential testing
