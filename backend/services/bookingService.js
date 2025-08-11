@@ -1,7 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../prismaClient');
 const emailService = require('./emailService');
 const smsService = require('./smsService');
-const prisma = new PrismaClient();
 
 class BookingService {
   // Create a new booking

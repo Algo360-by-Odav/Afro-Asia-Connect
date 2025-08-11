@@ -2,9 +2,7 @@ const express = require('express');
 const router = express.Router();
 const smsService = require('../services/smsService');
 const { authenticateToken, requireRole } = require('../middleware/authMiddleware');
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../prismaClient');
 
 // Test SMS functionality
 router.post('/test', authenticateToken, requireRole(['ADMIN', 'SERVICE_PROVIDER']), async (req, res) => {

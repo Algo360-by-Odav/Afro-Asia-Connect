@@ -3,9 +3,7 @@ const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const adminMiddleware = require('../middleware/adminMiddleware');
 const paymentService = require('../services/paymentService');
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../prismaClient');
 
 // Payment system health check
 router.get('/health', authMiddleware, async (req, res) => {

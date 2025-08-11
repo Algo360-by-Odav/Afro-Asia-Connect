@@ -2,8 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs'); // Already present, ensure it is
 const jwt = require('jsonwebtoken');
 // const db = require('../config/db'); // replaced by Prisma
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../prismaClient');
 require('dotenv').config({ path: '../.env' });
 const { authenticateToken } = require('../middleware/authMiddleware'); // Added for /me route // Ensure .env is loaded relative to this file's execution if needed directly
 

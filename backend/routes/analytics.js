@@ -2,10 +2,11 @@ const express = require('express');
 const businessAnalyticsService = require('../services/businessAnalyticsService');
 const analyticsService = require('../services/analyticsService');
 const { authenticateToken, requireRole } = require('../middleware/authMiddleware');
-const { PrismaClient } = require('@prisma/client');
-const router = express.Router();
+const prisma = require('../prismaClient');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-const prisma = new PrismaClient();
+const router = express.Router();
 
 // Provider analytics dashboard
 router.get('/provider/dashboard', authenticateToken, requireRole(['SERVICE_PROVIDER']), async (req, res) => {

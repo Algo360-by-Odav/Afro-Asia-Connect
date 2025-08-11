@@ -3,9 +3,7 @@ const router = express.Router();
 const adminPanelService = require('../services/adminPanelService');
 const auth = require('../middleware/authMiddleware');
 const { adminAuth } = require('../middleware/adminAuth'); // Middleware to check admin privileges
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../prismaClient');
 
 // Admin Panel Overview Routes
 

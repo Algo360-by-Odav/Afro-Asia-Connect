@@ -128,7 +128,7 @@ process.on('uncaughtException', (error) => {
 });
 
 // Start server (production-ready configuration)
-const PORT = process.env.PORT || 3001;
+// PORT already declared above
 
 if (require.main === module) {
   server.listen(PORT, '0.0.0.0', () => {

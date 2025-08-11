@@ -1,8 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../prismaClient');
 const emailService = require('./emailService');
 const smsService = require('./smsService');
-
-const prisma = new PrismaClient();
 
 // Initialize Stripe only if API key is provided
 let stripe = null;
