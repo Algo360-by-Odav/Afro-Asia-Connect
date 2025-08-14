@@ -9,16 +9,17 @@ const reminderScheduler = require('./services/reminderScheduler');
 const authRoutes = require('./routes/auth'); // Import auth routes
 const listingRoutes = require('./routes/listings');
 const servicesRoutes = require('./routes/services');
-const leadRoutes = require('./routes/leads'); // Added leads routes // Import listing routes
-const subscriptionRoutes = require('./routes/subscriptions'); // Import subscription routes
+const leadRoutes = require('./routes/leads');
+const subscriptionRoutes = require('./routes/subscriptions');
 const notificationRoutes = require('./routes/notifications');
-const contactRoutes = require('./routes/contact');
-const companyRoutes = require('./routes/companies');
-const productRoutes = require('./routes/products'); // Import notification routes
 const eventRoutes = require('./routes/events');
-const uploadRoutes = require('./routes/upload'); // Import event routes
+const companyRoutes = require('./routes/companies');
+const productRoutes = require('./routes/products');
+const contactRoutes = require('./routes/contact');
+const uploadRoutes = require('./routes/upload');
 const serviceRequestRoutes = require('./routes/serviceRequests');
 const consultationsRoutes = require('./routes/consultations');
+const dashboardRoutes = require('./routes/dashboard');
 const providersRoutes = require('./routes/providers');
 const documentsRoutes = require('./routes/documents');
 const documentSharesRoutes = require('./routes/documentShares');
@@ -88,6 +89,7 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/service-requests', serviceRequestRoutes);
 app.use('/api/consultations', consultationsRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/providers', providersRoutes);
 app.use('/api/documents', documentsRoutes);
 app.use('/api/document-shares', documentSharesRoutes);
