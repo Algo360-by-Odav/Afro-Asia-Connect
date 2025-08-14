@@ -6,7 +6,11 @@ let io;
 function initializeSocket(server) {
   io = new Server(server, {
     cors: {
-      origin: "http://localhost:3000",
+      origin: [
+        "http://localhost:3000",
+        "https://afroasia-connect.netlify.app",
+        process.env.FRONTEND_URL || "https://afroasia-connect.netlify.app"
+      ],
       credentials: true
     }
   });

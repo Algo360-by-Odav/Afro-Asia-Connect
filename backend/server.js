@@ -59,7 +59,13 @@ app.use(cookieParser()); // Middleware to parse cookies
 app.use(express.json());
 // allow frontend on different port with credentials
 app.use(cors({ 
-  origin: ['http://localhost:3000', 'http://127.0.0.1:61259', 'http://10.0.2.2:3001'],
+  origin: [
+    'http://localhost:3000', 
+    'http://127.0.0.1:61259', 
+    'http://10.0.2.2:3001',
+    'https://afroasia-connect.netlify.app',
+    process.env.FRONTEND_URL || 'https://afroasia-connect.netlify.app'
+  ],
   credentials: true 
 }));
 
