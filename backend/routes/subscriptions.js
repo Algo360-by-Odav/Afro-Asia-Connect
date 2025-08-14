@@ -8,10 +8,58 @@ const authMiddleware = require('../middleware/authMiddleware'); // Assuming this
 // @access  Public
 router.get('/plans', async (req, res) => {
   try {
-    const result = await db.query(
-      'SELECT id, name, price, currency, duration_days, features, description FROM subscription_plans WHERE is_active = TRUE ORDER BY price ASC'
-    );
-    res.json(result.rows);
+    // Static subscription plans data
+    const plans = [
+      {
+        id: 1,
+        name: 'Basic Connect',
+        price: '0',
+        currency: 'USD',
+        duration_days: 30,
+        features: [
+          'Basic Company Profile',
+          'Limited Directory Access',
+          'Post up to 1 Request',
+          'Community Forum Access'
+        ],
+        description: 'Perfect for getting started with AfroAsiaConnect'
+      },
+      {
+        id: 2,
+        name: 'Business Growth',
+        price: '49',
+        currency: 'USD',
+        duration_days: 30,
+        features: [
+          'Enhanced Company Profile',
+          'Full Directory Access',
+          'Post up to 10 Requests',
+          'Verified Badge',
+          'Priority Support',
+          'Access to Exclusive Events'
+        ],
+        description: 'Ideal for growing businesses seeking expansion'
+      },
+      {
+        id: 3,
+        name: 'Enterprise Global',
+        price: '199',
+        currency: 'USD',
+        duration_days: 30,
+        features: [
+          'Premium Company Profile',
+          'Unlimited Directory Access',
+          'Unlimited Requests',
+          'Premium Verified Badge',
+          'Dedicated Account Manager',
+          'Custom Integration Support',
+          'Advanced Analytics Dashboard'
+        ],
+        description: 'Complete solution for enterprise-level operations'
+      }
+    ];
+    
+    res.json(plans);
   } catch (err) {
     console.error('Error fetching subscription plans:', err.message);
     res.status(500).json({ msg: 'Server error while fetching subscription plans.' });
