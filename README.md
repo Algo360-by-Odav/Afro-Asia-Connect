@@ -1,4 +1,4 @@
-# 🌍 AfroAsiaConnect - B2B Marketplace Platform
+# 🌍 AfroAsiaConnect - Frontend Application
 
 <div align="center">
 
@@ -6,29 +6,29 @@
 [![Backend API](https://img.shields.io/badge/Backend%20API-Live-green?style=for-the-badge)](https://afro-asia-connect.onrender.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-**🚀 Connecting African and Asian Businesses for Global Trade Excellence**
+**🚀 Next.js Frontend for AfroAsiaConnect B2B Marketplace Platform**
 
-*A comprehensive B2B marketplace platform fostering international business connections, trade opportunities, and cross-continental partnerships between Africa and Asia.*
+*Modern, responsive web application connecting African and Asian businesses for global trade excellence.*
 
 </div>
 
 ---
 
-## 🎯 **Platform Overview**
+## 🎯 **Frontend Overview**
 
-AfroAsiaConnect is a production-ready, full-stack B2B marketplace designed to bridge the gap between African and Asian businesses. Our platform provides a comprehensive ecosystem for entrepreneurs, businesses, and investors to discover opportunities, build partnerships, and facilitate international trade.
+This is the Next.js frontend application for AfroAsiaConnect, a production-ready B2B marketplace platform. Built with modern web technologies, it provides an intuitive and professional interface for businesses to connect, trade, and grow internationally.
 
-### 🌟 **Why AfroAsiaConnect?**
+### 🌟 **Frontend Features**
 
-- **🌐 Cross-Continental Focus**: Specialized platform connecting two of the world's fastest-growing economic regions
-- **💼 B2B Marketplace**: Comprehensive business directory and networking platform
-- **🔒 Enterprise Security**: JWT-based authentication with role-based access control
-- **📱 Modern Architecture**: Built with cutting-edge technologies for scalability and performance
-- **🎨 Professional UI/UX**: Intuitive design optimized for business professionals
+- **🌐 Modern Next.js 15**: App Router with server-side rendering and static generation
+- **💼 Professional UI**: Clean, responsive design optimized for business users
+- **🔒 Secure Authentication**: JWT-based auth with role-based access control
+- **📱 Mobile-First Design**: Fully responsive across all device sizes
+- **🎨 Advanced Components**: Rich UI components with Tailwind CSS and Radix UI
 
 ---
 
-## ✨ **Key Features**
+## ✨ **Key Components**
 
 ### 🏢 **Business Management**
 - **Company Profiles**: Comprehensive business listings with detailed information
@@ -40,6 +40,53 @@ AfroAsiaConnect is a production-ready, full-stack B2B marketplace designed to br
 - **Multi-Role Authentication**: Support for buyers, sellers, and administrators
 - **Personalized Dashboard**: Real-time metrics and business insights
 - **Profile Management**: Complete user and business profile customization
+
+## 🚀 **Getting Started**
+
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn package manager
+
+### Installation
+
+1. **Clone the repository**
+```bash
+git clone https://github.com/Algo360-by-Odav/Afro-Asia-Connect.git
+cd Afro-Asia-Connect/frontend
+```
+
+2. **Install dependencies**
+```bash
+npm install
+# or
+yarn install
+```
+
+3. **Set up environment variables**
+```bash
+cp .env.example .env.local
+```
+
+4. **Run the development server**
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+5. **Open your browser**
+Navigate to [http://localhost:3000](http://localhost:3000) to see the application.
+
+## 🛠 **Tech Stack**
+
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **UI Components**: Radix UI, Lucide React
+- **State Management**: React Context API
+- **Authentication**: JWT tokens
+- **Charts**: Chart.js, Recharts
+- **Testing**: Jest, React Testing Library
 - **Subscription Tiers**: Flexible pricing plans for different business needs
 
 ### 💬 **Communication & Networking**
@@ -550,3 +597,4 @@ This project is proprietary. (Or specify your license, e.g., MIT, by creating a 
 ---
 
 *This README provides a general guide. Please update it with specific details relevant to the AfroAsiaConnect project as it evolves.*
+>>>>>>> 7f34ea33337c4909ce80dd38cfb0e13a77306fad

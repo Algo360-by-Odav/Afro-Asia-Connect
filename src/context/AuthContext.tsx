@@ -1,0 +1,222 @@
+"use client";
+
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+
+// Utility function to get cookie value by name
+const getCookie = (name: string): string | null => {
+  if (typeof document === 'undefined') return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    const cookieValue = parts.pop()?.split(';').shift();
+    return cookieValue || null;
+  }
+  return null;
+};
+
+interface User {
+  id: number; // Backend returns number, not string
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  isAdmin?: boolean; // Backend uses isAdmin field
+  user_type?: string; // Added user_type
+  // Add other user properties as needed
+}
+
+interface AuthContextType {
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  login: (token: string, user: User) => Promise<void>;
+  logout: () => void;
+  fetchUser: () => Promise<void>; // To refresh user data
+  // signup: (userData: any) => Promise<void>; // Placeholder for signup
+}
+
+// Helper to decode JWT payload without verification (client-side)
+const decodeJwtPayload = (token: string): Record<string, unknown> => {
+  try {
+    const payload = token.split('.')[1];
+    // Pad base64 string if necessary
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    console.warn('Failed to decode JWT payload', e);
+    return {};
+  }
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Attempt to load token and user from localStorage or cookies
+    const initializeAuth = async () => {
+      setIsLoading(true);
+      let storedToken = localStorage.getItem('token');
+      
+      // If no token in localStorage, check cookies as fallback
+      if (!storedToken) {
+        const cookieToken = getCookie('token');
+        if (cookieToken) {
+          storedToken = cookieToken;
+          // Sync token back to localStorage
+          localStorage.setItem('token', cookieToken);
+        }
+      }
+      
+      const storedUserStr = localStorage.getItem('user');
+      if (storedUserStr) {
+        try {
+          const parsedUser: User = JSON.parse(storedUserStr);
+          // Ensure user_type is normalized
+          if (!parsedUser.user_type) {
+          // attempt to derive from stored token
+          const decoded = storedToken ? decodeJwtPayload(storedToken) : {};
+          parsedUser.user_type = (decoded as any)?.user_type?.toLowerCase?.() || (decoded as any)?.role?.toLowerCase?.() || undefined;
+        } else {
+          parsedUser.user_type = parsedUser.user_type.toLowerCase();
+        }
+          setUser(parsedUser);
+        } catch (e) {
+          console.warn('Failed to parse stored user JSON:', e);
+          localStorage.removeItem('user');
+        }
+      }
+      // In a real app, you would validate the token with the backend here
+      // and fetch user details if the token is valid.
+      if (storedToken) {
+        setToken(storedToken);
+        // For now, let's assume if a token exists, we can fetch the user
+        // You'll need to implement the actual API call in fetchUser
+        try {
+          // Placeholder: fetch user data based on token
+          // const userData = await fetch('/api/auth/me', { headers: { 'Authorization': `Bearer ${storedToken}`}}).then(res => res.json());
+          // if (userData && userData.user) setUser(userData.user);
+          // For now, setting a dummy user if token exists
+          // setUser({ id: '1', email: 'test@example.com', firstName: 'Test' }); 
+        } catch (error) {
+          console.error('Failed to fetch user on init:', error);
+          localStorage.removeItem('token'); // Clear invalid token
+          setToken(null);
+          setUser(null);
+        }
+      } else {
+        // If no token, ensure user is null
+        setUser(null);
+      }
+      setIsLoading(false);
+    };
+    initializeAuth();
+  }, []);
+
+  const login = async (tokenValue: string, userData: User): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      setIsLoading(true);
+      console.log('AuthContext: login called with token and user data');
+      
+      setToken(tokenValue);
+      // Normalize user_type to lowercase (if provided) to maintain consistent role checks across the app
+      let roleValue = (userData.user_type ?? (userData as any).role) as string | undefined;
+      if (!roleValue) {
+        const decoded = decodeJwtPayload(tokenValue);
+        roleValue = (decoded.user_type ?? decoded.role) as string | undefined;
+      }
+      const normalizedUser: User = {
+        ...userData,
+        user_type: roleValue?.toLowerCase() || undefined,
+      };
+      setUser(normalizedUser);
+      // Persist to localStorage for page refreshes
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
+      localStorage.setItem('token', tokenValue);
+      
+      // Also set token in cookies for middleware access
+      document.cookie = `token=${tokenValue}; path=/; max-age=${5 * 60 * 60}; SameSite=Strict; Secure=${window.location.protocol === 'https:'}`;
+      
+      setIsLoading(false);
+      
+      // Resolve the promise after a small delay to ensure state is updated
+      setTimeout(() => {
+        console.log('AuthContext: login state updated, resolving promise');
+        resolve();
+      }, 50);
+    });
+  };
+
+  const logout = () => {
+    setIsLoading(true);
+    // Placeholder: Replace with actual API call to invalidate token on backend
+    console.log('AuthContext: logout called');
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    
+    // Clear token cookie
+    document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
+    
+    router.push('/auth'); // Redirect to auth page
+    setIsLoading(false);
+  };
+
+  const fetchUser = async () => {
+    // This function would typically be called to refresh user data
+    // or after certain operations like profile update.
+    console.log('AuthContext: fetchUser called');
+    const currentToken = localStorage.getItem('token');
+    if (!currentToken) {
+      // setUser(null); // Ensure user is cleared if no token
+      // setToken(null);
+      return;
+    }
+    setIsLoading(true);
+    // try {
+      // const response = await fetch('/api/auth/me', {
+        // headers: { 'Authorization': `Bearer ${currentToken}` },
+      // });
+      // if (response.ok) {
+        // const data = await response.json();
+        // setUser(data.user);
+      // } else {
+        // console.error('Failed to fetch user, token might be invalid');
+        // logout(); // Token is invalid or expired, log out user
+      // }
+    // } catch (error) {
+      // console.error('Error fetching user:', error);
+      // // Potentially logout if network error or server issue prevents validation
+    // }
+    // Dummy implementation for now
+    if (currentToken === 'dummy-jwt-token' && !user) {
+        setUser({ id: 1, email: 'user@example.com', firstName: 'Dummy' });
+    }
+    setIsLoading(false);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, token, isLoading, login, logout, fetchUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
