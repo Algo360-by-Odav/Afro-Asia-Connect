@@ -1,179 +1,179 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '@/context/AuthContext';
 import { 
-  MessageCircle, 
-  Search, 
-  Plus, 
   Send, 
   Paperclip, 
   Smile, 
-  MoreVertical,
-  Phone,
-  Video,
-  Info,
-  Reply,
-  Heart,
-  ThumbsUp,
-  Laugh,
-  Angry,
-  Trash2,
-  Download,
-  Image,
-  File
+  MoreVertical, 
+  Search, 
+  Phone, 
+  Video, 
+  Info, 
+  Reply, 
+  Trash2, 
+  Heart, 
+  ThumbsUp, 
+  Laugh, 
+  Angry, 
+  Sad, 
+  Plus, 
+  X, 
+  MessageCircle,
+  Users,
+  Clock,
+  Check,
+  CheckCheck,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
-
-interface Conversation {
-  id: number;
-  title?: string;
-  type: 'direct' | 'group';
-  participants: User[];
-  lastMessage?: Message;
-  unreadCount: number;
-  updatedAt: string;
-}
-
-interface Message {
-  id: number;
-  content: string;
-  type: 'text' | 'image' | 'file' | 'deleted';
-  sender: User;
-  createdAt: string;
-  isRead: boolean;
-  reactions?: Reaction[];
-  replyTo?: Message;
-  metadata?: any;
-}
+import { useSocket } from '../../../context/SocketContext';
+import { useAuth } from '../../../context/AuthContext';
 
 interface User {
   id: number;
   firstName: string;
-  lastName: string;
-  profilePicture?: string;
-  isOnline?: boolean;
-  lastSeen?: string;
+  lastName?: string;
+  email: string;
+  avatar?: string;
 }
 
-interface Reaction {
+interface Message {
   id: number;
-  emoji: string;
-  user: User;
+  conversationId: number;
+  senderId: number;
+  content: string;
+  messageType: 'TEXT' | 'FILE' | 'SYSTEM';
+  fileUrl?: string;
+  fileName?: string;
+  isRead: boolean;
+  createdAt: string;
+  sender: User;
+  reactions?: Array<{
+    id: number;
+    userId: number;
+    emoji: string;
+    user: User;
+  }>;
+  replyTo?: {
+    id: number;
+    content: string;
+    sender: User;
+  };
+}
+
+interface Conversation {
+  id: number;
+  participants: User[];
+  lastMessage?: Message;
+  _count: {
+    messages: number;
+  };
+  updatedAt: string;
+  serviceRequestId?: number;
+  consultationId?: number;
 }
 
 const MessagesPage = () => {
   const { user, token } = useAuth();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { 
+    socket, 
+    isConnected, 
+    conversations, 
+    activeConversation, 
+    messages, 
+    sendMessage: socketSendMessage, 
+    startTyping, 
+    stopTyping, 
+    typingUsers, 
+    onlineUsers, 
+    isUserOnline, 
+    markAsRead, 
+    refreshConversations, 
+    setActiveConversation 
+  } = useSocket();
+  
   const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [isTyping, setIsTyping] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    fetchConversations();
-  }, []);
-
-  useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.id);
-    }
-  }, [selectedConversation]);
-
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Join conversation room when active conversation changes
+  useEffect(() => {
+    if (activeConversation && socket) {
+      socket.emit('join_conversation', activeConversation.id);
+      markAsRead(activeConversation.id);
+    }
+  }, [activeConversation, socket]);
+
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const fetchConversations = async () => {
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/messaging/conversations`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewMessage(value);
 
-      if (!response.ok) throw new Error('Failed to fetch conversations');
+    if (!activeConversation || !socket) return;
 
-      const data = await response.json();
-      setConversations(data.conversations || []);
-      
-      // Select first conversation if available
-      if (data.conversations?.length > 0 && !selectedConversation) {
-        setSelectedConversation(data.conversations[0]);
+    // Start typing indicator
+    if (value.trim() && !isTyping) {
+      setIsTyping(true);
+      startTyping(activeConversation.id);
+    }
+
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Stop typing after 2 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      if (isTyping) {
+        setIsTyping(false);
+        stopTyping(activeConversation.id);
       }
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
-    } finally {
-      setLoading(false);
-    }
+    }, 2000);
   };
 
-  const fetchMessages = async (conversationId: number) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/messaging/conversations/${conversationId}/messages`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to fetch messages');
-
-      const data = await response.json();
-      setMessages(data.messages || []);
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    }
-  };
-
-  const sendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedConversation || sendingMessage) return;
+    if (!newMessage.trim() || !activeConversation || sendingMessage) return;
 
     setSendingMessage(true);
+    
     try {
-      const messageData = {
-        content: newMessage.trim(),
-        type: 'text',
-        ...(replyingTo && { replyToId: replyingTo.id })
-      };
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/messaging/conversations/${selectedConversation.id}/messages`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(messageData)
+      // Use Socket.IO for real-time message sending
+      if (socket && isConnected) {
+        socketSendMessage(activeConversation.id, newMessage.trim());
+        setNewMessage('');
+        
+        // Stop typing indicator
+        if (isTyping) {
+          stopTyping(activeConversation.id);
+          setIsTyping(false);
         }
-      );
-
-      if (!response.ok) throw new Error('Failed to send message');
-
-      const data = await response.json();
-      setMessages([...messages, data.message]);
-      setNewMessage('');
-      setReplyingTo(null);
-      
-      // Update conversation list
-      fetchConversations();
+      }
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -181,55 +181,41 @@ const MessagesPage = () => {
     }
   };
 
-  const handleFileUpload = async (file: File) => {
-    if (!selectedConversation) return;
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeConversation) return;
 
     setUploadingFile(true);
+    
     try {
       const formData = new FormData();
       formData.append('file', file);
 
-      const uploadResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/messaging/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (!uploadResponse.ok) throw new Error('Failed to upload file');
-
-      const uploadData = await uploadResponse.json();
-      
-      // Send message with file
-      const messageData = {
-        content: file.name,
-        type: file.type.startsWith('image/') ? 'image' : 'file',
-        metadata: {
-          fileUrl: uploadData.file.url,
-          fileName: uploadData.file.originalName,
-          fileSize: uploadData.file.size,
-          mimeType: uploadData.file.mimeType
-        }
-      };
-
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/messaging/conversations/${selectedConversation.id}/messages`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/messaging/conversations/${activeConversation.id}/upload`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify(messageData)
+          body: formData
         }
       );
 
-      if (!response.ok) throw new Error('Failed to send file message');
+      if (!response.ok) throw new Error('Failed to upload file');
 
       const data = await response.json();
-      setMessages([...messages, data.message]);
-      fetchConversations();
+      
+      // Send file message via Socket.IO
+      if (socket && isConnected) {
+        socket.emit('send_message', {
+          conversationId: activeConversation.id,
+          content: `Shared a file: ${file.name}`,
+          messageType: 'FILE',
+          fileUrl: data.fileUrl,
+          fileName: file.name
+        });
+      }
     } catch (error) {
       console.error('Error uploading file:', error);
     } finally {
@@ -237,135 +223,127 @@ const MessagesPage = () => {
     }
   };
 
-  const addReaction = async (messageId: number, emoji: string) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/messaging/messages/${messageId}/reactions`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ emoji })
-        }
-      );
-
-      if (!response.ok) throw new Error('Failed to add reaction');
-
-      // Refresh messages to show updated reactions
-      if (selectedConversation) {
-        fetchMessages(selectedConversation.id);
-      }
-    } catch (error) {
-      console.error('Error adding reaction:', error);
-    }
-  };
-
   const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+      return new Date(dateString).toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+    } catch {
+      return '';
+    }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    if (date.toDateString() === today.toDateString()) {
-      return 'Today';
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
-    } else {
-      return date.toLocaleDateString();
-    }
+  const getParticipantName = (participants: any[]) => {
+    const otherParticipant = participants?.find(p => p.id !== user?.id);
+    return otherParticipant ? `${otherParticipant.firstName} ${otherParticipant.lastName || ''}`.trim() : 'Unknown User';
   };
 
   const filteredConversations = conversations.filter(conv =>
     conv.participants.some(p => 
       `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || conv.title?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="h-screen bg-white flex">
-      {/* Conversations Sidebar */}
-      <div className="w-1/3 border-r border-gray-200 flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-semibold">Messages</h1>
-            <button className="p-2 hover:bg-gray-100 rounded-lg">
-              <Plus className="w-5 h-5" />
+    otherParticipant.firstName?.toLowerCase().includes(searchLower) ||
+    otherParticipant.lastName?.toLowerCase().includes(searchLower) ||
+    otherParticipant.email?.toLowerCase().includes(searchLower)
+  );
+});
+
+// Check if anyone is typing (excluding current user)
+const isAnyoneTyping = typingUsers.some(userId => userId !== user?.id);
+const typingUsersList = typingUsers
+  .filter(userId => userId !== user?.id)
+  .map(userId => {
+    const typingUser = activeConversation?.participants.find(p => p.id === userId);
+    return typingUser ? typingUser.firstName : 'Someone';
+  });
+
+return (
+  <div className="flex h-screen bg-gray-50">
+    {/* Sidebar - Conversations List */}
+    <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
+          <div className="flex items-center space-x-2">
+            <div className={`flex items-center space-x-1 text-sm ${
+              isConnected ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {isConnected ? (
+                <><Wifi className="h-4 w-4" /> <span>Connected</span></>
+              ) : (
+                <><WifiOff className="h-4 w-4" /> <span>Disconnected</span></>
+              )}
+            </div>
+            <button 
+              className="p-2 hover:bg-gray-100 rounded-lg"
+              title="Start new conversation"
+            >
+              <Plus className="h-5 w-5 text-gray-600" />
             </button>
           </div>
-          
-          {/* Search */}
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search conversations..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
         </div>
+        
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search conversations..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            aria-label="Search conversations"
+          />
+        </div>
+      </div>
 
-        {/* Conversations List */}
-        <div className="flex-1 overflow-y-auto">
-          {filteredConversations.map((conversation) => {
-            const otherParticipant = conversation.participants.find(p => p.id !== user?.id);
-            const displayName = conversation.title || 
-              (otherParticipant ? `${otherParticipant.firstName} ${otherParticipant.lastName}` : 'Unknown');
-
+      {/* Conversations List */}
+      <div className="flex-1 overflow-y-auto">
+        {conversations.length === 0 ? (
+          <div className="p-4 text-center text-gray-500">
+            {searchTerm ? 'No conversations found' : 'No conversations yet'}
+          </div>
+        ) : (
+          filteredConversations.map((conversation) => {
+            const otherParticipant = conversation.participants?.find(p => p.id !== user?.id);
+            const isOnline = otherParticipant ? isUserOnline(otherParticipant.id) : false;
+            const participantName = getParticipantName(conversation.participants || []);
+            
             return (
               <div
                 key={conversation.id}
-                onClick={() => setSelectedConversation(conversation)}
-                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-                  selectedConversation?.id === conversation.id ? 'bg-blue-50 border-blue-200' : ''
+                onClick={() => setActiveConversation(conversation)}
+                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                  activeConversation?.id === conversation.id ? 'bg-blue-50 border-r-2 border-r-blue-500' : ''
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center space-x-3">
                   <div className="relative">
-                    <img
-                      src={otherParticipant?.profilePicture || '/default-avatar.png'}
-                      alt={displayName}
-                      className="w-12 h-12 rounded-full"
-                    />
-                    {otherParticipant?.isOnline && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                    <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
+                      {otherParticipant?.firstName?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                    {isOnline && (
+                      <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
                     )}
                   </div>
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-gray-900 truncate">{displayName}</h3>
-                      {conversation.lastMessage && (
-                        <span className="text-xs text-gray-500">
-                          {formatTime(conversation.lastMessage.createdAt)}
-                        </span>
-                      )}
+                      <h3 className="font-medium text-gray-900 truncate">
+                        {participantName}
+                      </h3>
+                      <span className="text-xs text-gray-500">
+                        {conversation.lastMessage ? formatTime(conversation.lastMessage.createdAt) : ''}
+                      </span>
                     </div>
                     
-                    {conversation.lastMessage && (
-                      <p className="text-sm text-gray-600 truncate">
-                        {conversation.lastMessage.type === 'image' ? '📷 Image' :
-                         conversation.lastMessage.type === 'file' ? '📎 File' :
-                         conversation.lastMessage.content}
-                      </p>
-                    )}
+                    <p className="text-sm text-gray-600 truncate mt-1">
+                      {conversation.lastMessage.type === 'image' ? '📷 Image' :
+                       conversation.lastMessage.type === 'file' ? '📎 File' :
+                       conversation.lastMessage.content}
+                    </p>
                   </div>
                   
                   {conversation.unreadCount > 0 && (
@@ -390,200 +368,185 @@ const MessagesPage = () => {
                 <img
                   src={selectedConversation.participants.find(p => p.id !== user?.id)?.profilePicture || '/default-avatar.png'}
                   alt="Profile"
-                  className="w-10 h-10 rounded-full"
-                />
-                <div>
-                  <h2 className="font-semibold">
-                    {selectedConversation.title || 
-                     selectedConversation.participants.find(p => p.id !== user?.id)?.firstName + ' ' +
-                     selectedConversation.participants.find(p => p.id !== user?.id)?.lastName}
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    {selectedConversation.participants.find(p => p.id !== user?.id)?.isOnline ? 'Online' : 'Offline'}
-                  </p>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-gray-100 rounded-lg">
-                  <Phone className="w-5 h-5" />
-                </button>
-                <button className="p-2 hover:bg-gray-100 rounded-lg">
-                  <Video className="w-5 h-5" />
-                </button>
-                <button className="p-2 hover:bg-gray-100 rounded-lg">
-                  <Info className="w-5 h-5" />
-                </button>
+                
+                <div className="flex items-center space-x-2">
+                  <button 
+                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                    title="Voice call"
+                  >
+                    <Phone className="h-5 w-5" />
+                  </button>
+                  <button 
+                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                    title="Video call"
+                  >
+                    <Video className="h-5 w-5" />
+                  </button>
+                  <button 
+                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                    title="Conversation info"
+                  >
+                    <Info className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((message, index) => {
-                const isOwn = message.sender.id === user?.id;
-                const showDate = index === 0 || 
-                  formatDate(messages[index - 1].createdAt) !== formatDate(message.createdAt);
-
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              {messages.map((message) => {
+                const isOwn = message.senderId === user?.id;
+                
                 return (
-                  <div key={message.id}>
-                    {showDate && (
-                      <div className="text-center text-sm text-gray-500 my-4">
-                        {formatDate(message.createdAt)}
-                      </div>
-                    )}
-                    
-                    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group`}>
-                      <div className={`max-w-xs lg:max-w-md ${isOwn ? 'order-2' : 'order-1'}`}>
-                        {message.replyTo && (
-                          <div className="mb-2 p-2 bg-gray-100 rounded-lg text-sm">
-                            <p className="text-gray-600">Replying to {message.replyTo.sender.firstName}</p>
-                            <p className="truncate">{message.replyTo.content}</p>
+                  <div key={message.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow-sm ${
+                      isOwn 
+                        ? 'bg-blue-500 text-white' 
+                        : 'bg-white text-gray-900 border border-gray-200'
+                    }`}>
+                      {!isOwn && (
+                        <p className="text-xs text-gray-500 mb-1 font-medium">
+                          {message.sender?.firstName || 'Unknown'}
+                        </p>
+                      )}
+                      
+                      {message.messageType === 'FILE' ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Paperclip className="h-4 w-4" />
+                            <span className="text-sm font-medium">{message.fileName}</span>
+                          </div>
+                          {message.fileUrl && (
+                            <a 
+                              href={message.fileUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className={`text-sm underline hover:no-underline ${
+                                isOwn ? 'text-blue-100' : 'text-blue-600'
+                              }`}
+                            >
+                              Download File
+                            </a>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm">{message.content}</p>
+                      )}
+                      
+                      <div className="flex items-center justify-between mt-2">
+                        <span className={`text-xs ${
+                          isOwn ? 'text-blue-100' : 'text-gray-500'
+                        }`}>
+                          {formatTime(message.createdAt)}
+                        </span>
+                        
+                        {isOwn && (
+                          <div className="flex items-center">
+                            {message.isRead ? (
+                              <CheckCheck className="h-3 w-3 text-blue-100" title="Read" />
+                            ) : (
+                              <Check className="h-3 w-3 text-blue-100" title="Sent" />
+                            )}
                           </div>
                         )}
-                        
-                        <div
-                          className={`px-4 py-2 rounded-lg ${
-                            isOwn 
-                              ? 'bg-blue-600 text-white' 
-                              : 'bg-gray-100 text-gray-900'
-                          } ${message.type === 'deleted' ? 'italic opacity-60' : ''}`}
-                        >
-                          {message.type === 'image' && message.metadata?.fileUrl && (
-                            <img
-                              src={`${process.env.NEXT_PUBLIC_API_URL}${message.metadata.fileUrl}`}
-                              alt="Shared image"
-                              className="max-w-full h-auto rounded-lg mb-2"
-                            />
-                          )}
-                          
-                          {message.type === 'file' && message.metadata?.fileUrl && (
-                            <div className="flex items-center gap-2 p-2 bg-white bg-opacity-20 rounded-lg mb-2">
-                              <File className="w-5 h-5" />
-                              <span className="flex-1 truncate">{message.metadata.fileName}</span>
-                              <button className="p-1 hover:bg-white hover:bg-opacity-20 rounded">
-                                <Download className="w-4 h-4" />
-                              </button>
-                            </div>
-                          )}
-                          
-                          <p>{message.content}</p>
-                          
-                          {message.reactions && message.reactions.length > 0 && (
-                            <div className="flex gap-1 mt-2">
-                              {message.reactions.map((reaction) => (
-                                <span key={reaction.id} className="text-sm">
-                                  {reaction.emoji}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className={`text-xs text-gray-500 mt-1 ${isOwn ? 'text-right' : 'text-left'}`}>
-                          {formatTime(message.createdAt)}
-                        </div>
-                      </div>
-                      
-                      {/* Message Actions */}
-                      <div className={`${isOwn ? 'order-1 mr-2' : 'order-2 ml-2'} opacity-0 group-hover:opacity-100 transition-opacity`}>
-                        <div className="flex flex-col gap-1">
-                          <button
-                            onClick={() => addReaction(message.id, '👍')}
-                            className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
-                          >
-                            <ThumbsUp className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setReplyingTo(message)}
-                            className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
-                          >
-                            <Reply className="w-4 h-4" />
-                          </button>
-                        </div>
                       </div>
                     </div>
                   </div>
                 );
               })}
+
+              {/* Typing Indicator */}
+              {isAnyoneTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-200 rounded-lg px-4 py-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-100"></div>
+                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-200"></div>
+                      </div>
+                      <span className="text-xs text-gray-600">
+                        {typingUsersList.join(', ')} {typingUsersList.length === 1 ? 'is' : 'are'} typing...
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Reply Preview */}
-            {replyingTo && (
-              <div className="px-4 py-2 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Reply className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">
-                    Replying to {replyingTo.sender.firstName}: {replyingTo.content.substring(0, 50)}...
-                  </span>
-                </div>
-                <button
-                  onClick={() => setReplyingTo(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ×
-                </button>
-              </div>
-            )}
-
             {/* Message Input */}
-            <div className="p-4 border-t border-gray-200">
-              <form onSubmit={sendMessage} className="flex items-center gap-2">
+            <div className="bg-white border-t border-gray-200 p-4">
+              <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
                 <input
                   type="file"
                   ref={fileInputRef}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload(file);
-                  }}
+                  onChange={handleFileUpload}
                   className="hidden"
-                  accept="image/*,application/pdf,.doc,.docx,.txt,.zip,.rar"
+                  accept="*/*"
                 />
                 
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingFile}
-                  className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700"
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                  title="Attach file"
                 >
-                  <Paperclip className="w-5 h-5" />
+                  <Paperclip className="h-5 w-5" />
                 </button>
-                
+
                 <div className="flex-1 relative">
                   <input
                     type="text"
                     value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type a message..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={handleInputChange}
+                    placeholder="Type your message..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     disabled={sendingMessage}
+                    aria-label="Message input"
                   />
                 </div>
-                
+
                 <button
                   type="button"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-700"
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                  title="Add emoji"
                 >
-                  <Smile className="w-5 h-5" />
+                  <Smile className="h-5 w-5" />
                 </button>
-                
+
                 <button
                   type="submit"
                   disabled={!newMessage.trim() || sendingMessage}
-                  className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  title="Send message"
                 >
-                  <Send className="w-5 h-5" />
+                  <Send className="h-4 w-4" />
+                  <span>{sendingMessage ? 'Sending...' : 'Send'}</span>
                 </button>
               </form>
+
+              {uploadingFile && (
+                <div className="mt-2 text-sm text-gray-600">
+                  Uploading file...
+                </div>
+              )}
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center bg-gray-50">
             <div className="text-center">
-              <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Select a conversation</h3>
-              <p className="text-gray-500">Choose a conversation from the sidebar to start messaging</p>
+              <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Select a conversation
+              </h3>
+              <p className="text-gray-500">
+                Choose a conversation from the sidebar to start messaging
+              </p>
             </div>
           </div>
         )}
