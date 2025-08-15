@@ -1,0 +1,37 @@
+// Additional models mapped to legacy tables for Notifications and Business Listings
+model Notification {
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int      @map("user_id")
+  type       String
+  message    String
+  link       String?
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("notifications")
+}
+
+model BusinessListing {
+  id                Int      @id @default(autoincrement())
+  user              User     @relation(fields: [userId], references: [id])
+  userId            Int      @map("user_id")
+  businessName      String   @map("business_name")
+  businessCategory  String   @map("business_category")
+  description       String
+  countryOfOrigin   String   @map("country_of_origin")
+  targetMarkets     Json?    @map("target_markets")
+  contactEmail      String?  @map("contact_email")
+  contactPhone      String?  @map("contact_phone")
+  websiteUrl        String?  @map("website_url")
+  logoImageUrl      String?  @map("logo_image_url")
+  galleryImageUrls  Json?    @map("gallery_image_urls")
+  languagesSpoken   Json?    @map("languages_spoken")
+  isActive          Boolean  @default(true) @map("is_active")
+  isVerified        Boolean  @default(false) @map("is_verified")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("business_listings")
+}
