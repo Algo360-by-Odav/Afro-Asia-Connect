@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
-const authMiddleware = require('../middleware/auth');
+const prisma = require('../prismaClient');
+const { authenticateToken } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
-
-const prisma = new PrismaClient();
+const fs = require('fs');
+const RealTimeNotificationService = require('../services/realTimeNotificationService');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
