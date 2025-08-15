@@ -39,6 +39,8 @@ const adminPanelRoutes = require('./routes/adminPanel');
 const marketInsightsRoutes = require('./routes/marketInsights');
 const billingRoutes = require('./routes/billing');
 const teamRoutes = require('./routes/team');
+const teamsRoutes = require('./routes/teams'); // New advanced teams API
+const profilesRoutes = require('./routes/profiles'); // New advanced profiles API
 const reviewsRoutes = require('./routes/reviews');
 const bookingsRoutes = require('./routes/bookings');
 const emailsRoutes = require('./routes/emails');
@@ -109,6 +111,8 @@ app.use('/api/admin', adminPanelRoutes);
 app.use('/api/market-insights', marketInsightsRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/team', teamRoutes);
+app.use('/api/teams', teamsRoutes); // New advanced teams management API
+app.use('/api/profiles', profilesRoutes); // New advanced user profiles API
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/bookings', bookingsRoutes);
 app.use('/api/emails', emailsRoutes);
