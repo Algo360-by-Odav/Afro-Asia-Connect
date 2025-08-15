@@ -1,0 +1,18 @@
+Render Environment Variables - Add these in Render dashboard:
+
+NODE_ENV=production
+JWT_SECRET=3a6c82362091d5424bbcfb25ce57ec8d6195a3c6d650f6b05f725efcfb8c7daa425616f553f4798443eff295e7efcc1d6a9b6c6ddb153297b43c62a1a6b00629
+JWT_EXPIRES_IN=7d
+FRONTEND_URL=https://afroasiaconnect-platform.windsurf.build
+CORS_ORIGIN=https://afroasiaconnect-platform.windsurf.build
+STRIPE_SECRET_KEY=sk_test_HNmrtHYefUko9Ho7PRmuNl5b
+STRIPE_PUBLISHABLE_KEY=pk_test_Zj2HL23sL0VeOEhcUOxth5ns
+TWILIO_ACCOUNT_SID=AC80e4fb649b7f71084b62b425ae6a78dd
+TWILIO_AUTH_TOKEN=3402412f65d87ef0cccc308987a877c1
+TWILIO_PHONE_NUMBER=+12543584566
+EMAIL_USER=afroasiaconnect2025@gmail.com
+EMAIL_PASSWORD=Adell Nate Catelia Era
+EMAIL_FROM=AfroAsiaConnect <noreply@afroasiaconnect.com>
+MAX_FILE_SIZE=10485760
+
+# DATABASE_URL will be automatically set by Render PostgreSQL addon
