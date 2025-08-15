@@ -1,71 +1,73 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { 
-  MessageCircle, 
-  Search, 
-  Plus, 
-  Send, 
-  Paperclip, 
-  Smile, 
-  MoreVertical,
-  Phone,
-  Video,
-  Info,
-  Reply,
-  Heart,
-  ThumbsUp,
-  Laugh,
-  Angry,
-  Trash2,
-  Download,
-  Image,
-  File
-} from 'lucide-react';
-
-interface Conversation {
-  id: number;
-  title?: string;
-  type: 'direct' | 'group';
-  participants: User[];
-  lastMessage?: Message;
-  unreadCount: number;
-  updatedAt: string;
-}
-
-interface Message {
-  id: number;
-  content: string;
-  type: 'text' | 'image' | 'file' | 'deleted';
-  sender: User;
-  createdAt: string;
-  isRead: boolean;
-  reactions?: Reaction[];
-  replyTo?: Message;
-  metadata?: any;
-}
+import { Send, Paperclip, Smile, MoreVertical, Search, Phone, Video, Info, Reply, Trash2, Heart, ThumbsUp, Laugh, Angry, Sad, Plus, X, MessageCircle } from 'lucide-react';
+import { useSocket } from '../../../context/SocketContext';
+import { useAuth } from '../../../context/AuthContext';
 
 interface User {
   id: number;
   firstName: string;
-  lastName: string;
-  profilePicture?: string;
-  isOnline?: boolean;
-  lastSeen?: string;
+  lastName?: string;
+  email: string;
+  avatar?: string;
 }
 
-interface Reaction {
+interface Message {
   id: number;
-  emoji: string;
-  user: User;
+  conversationId: number;
+  senderId: number;
+  content: string;
+  messageType: 'TEXT' | 'FILE' | 'SYSTEM';
+  fileUrl?: string;
+  fileName?: string;
+  isRead: boolean;
+  createdAt: string;
+  sender: User;
+  reactions?: Array<{
+    id: number;
+    userId: number;
+    emoji: string;
+    user: User;
+  }>;
+  replyTo?: {
+    id: number;
+    content: string;
+    sender: User;
+  };
+}
+
+interface Conversation {
+  id: number;
+  participants: User[];
+  lastMessage?: Message;
+  _count: {
+    messages: number;
+  };
+  updatedAt: string;
+  serviceRequestId?: number;
+  consultationId?: number;
 }
 
 const MessagesPage = () => {
   const { user, token } = useAuth();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { 
+    socket, 
+    isConnected, 
+    conversations, 
+    activeConversation, 
+    messages, 
+    sendMessage: socketSendMessage, 
+    startTyping, 
+    stopTyping, 
+    typingUsers, 
+    onlineUsers, 
+    isUserOnline, 
+    markAsRead, 
+    refreshConversations, 
+    setActiveConversation 
+  } = useSocket();
+  
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -73,23 +75,56 @@ const MessagesPage = () => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    fetchConversations();
+    refreshConversations();
   }, []);
 
   useEffect(() => {
-    if (selectedConversation) {
-      fetchMessages(selectedConversation.id);
+    if (activeConversation) {
+      // Join conversation room for real-time updates
+      if (socket) {
+        socket.emit('join_conversation', activeConversation.id);
+        markAsRead(activeConversation.id);
+      }
     }
-  }, [selectedConversation]);
+  }, [activeConversation, socket]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Handle typing indicators
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewMessage(value);
+
+    if (!activeConversation || !socket) return;
+
+    // Start typing indicator
+    if (value.trim() && !isTyping) {
+      setIsTyping(true);
+      startTyping(activeConversation.id);
+    }
+
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Stop typing after 2 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      if (isTyping) {
+        setIsTyping(false);
+        stopTyping(activeConversation.id);
+      }
+    }, 2000);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -143,37 +178,51 @@ const MessagesPage = () => {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedConversation || sendingMessage) return;
+    if (!newMessage.trim() || !activeConversation || sendingMessage) return;
 
     setSendingMessage(true);
+    
     try {
-      const messageData = {
-        content: newMessage.trim(),
-        type: 'text',
-        ...(replyingTo && { replyToId: replyingTo.id })
-      };
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/messaging/conversations/${selectedConversation.id}/messages`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(messageData)
+      // Use Socket.IO for real-time message sending
+      if (socket && isConnected) {
+        socketSendMessage(activeConversation.id, newMessage.trim());
+        setNewMessage('');
+        setReplyingTo(null);
+        
+        // Stop typing indicator
+        if (isTyping) {
+          stopTyping(activeConversation.id);
+          setIsTyping(false);
         }
-      );
+      } else {
+        // Fallback to HTTP API if socket not connected
+        const messageData = {
+          content: newMessage.trim(),
+          messageType: 'TEXT',
+          ...(replyingTo && { replyToId: replyingTo.id })
+        };
 
-      if (!response.ok) throw new Error('Failed to send message');
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/messaging/conversations/${activeConversation.id}/messages`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(messageData)
+          }
+        );
 
-      const data = await response.json();
-      setMessages([...messages, data.message]);
-      setNewMessage('');
-      setReplyingTo(null);
-      
-      // Update conversation list
-      fetchConversations();
+        if (!response.ok) throw new Error('Failed to send message');
+
+        const data = await response.json();
+        setNewMessage('');
+        setReplyingTo(null);
+        
+        // Refresh conversations and messages
+        refreshConversations();
+      }
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
