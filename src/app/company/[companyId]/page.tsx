@@ -8,9 +8,9 @@ interface CompanyProfilePageProps {
   }>;
 }
 
-import ProfileTopSection from '@/app/components/company-profile/ProfileTopSection';
-import ProfileMainContent from '@/app/components/company-profile/ProfileMainContent';
-import ProfileSidebar from '@/app/components/company-profile/ProfileSidebar';
+import ProfileTopSection from '../../components/company-profile/ProfileTopSection';
+import ProfileMainContent from '../../components/company-profile/ProfileMainContent';
+import ProfileSidebar from '../../components/company-profile/ProfileSidebar';
 
 export default function CompanyProfilePage({ params: paramsPromise }: CompanyProfilePageProps) {
   const params = React.use(paramsPromise);
