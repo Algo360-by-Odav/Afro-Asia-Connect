@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { API_BASE_URL } from '@/config/api';
+import { useAuth } from '../../../context/AuthContext';
+import { API_BASE_URL } from '../../../config/api';
 import { LockClosedIcon, EnvelopeIcon, UserIcon, BuildingOffice2Icon, BriefcaseIcon } from '@heroicons/react/24/outline'; // Example icons
 
 type AuthMode = 'login' | 'register';
