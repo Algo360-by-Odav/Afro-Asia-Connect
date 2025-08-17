@@ -1996,6 +1996,8 @@ const AdminDashboard = () => {
                         type="email"
                         defaultValue="noreply@afroasiaconnect.com"
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        title="From email address"
+                        placeholder="Enter from email address"
                       />
                     </div>
                     <div className="flex items-center justify-between">
