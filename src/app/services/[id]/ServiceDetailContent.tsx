@@ -25,7 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { useState, useEffect } from 'react';
-import { API_BASE_URL } from '@/config/api';
+import { API_BASE_URL } from '../../../config/api';
 
 interface Review {
   id: string;

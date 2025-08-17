@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from './components/layout/Navbar'; // Import the Navbar
-import { AuthProvider } from '@/context/AuthContext'; // Import AuthProvider
+import { AuthProvider } from '../context/AuthContext'; // Import AuthProvider
 import { SocketProvider } from '@/context/SocketContext';
 import FloatingChatButton from './components/messaging/FloatingChatButton';
 import { ToastContainer } from 'react-toastify';

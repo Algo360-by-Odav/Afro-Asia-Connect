@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { API_BASE_URL } from '@/config/api';
+import { API_BASE_URL } from '../../config/api';
 import { Search, Filter, Star, MapPin, Clock, ArrowLeft, Grid, List } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
