@@ -410,8 +410,10 @@ const MarketInsightsPage: React.FC = () => {
                         <div className="text-xs text-gray-600 mb-1">Market Demand</div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div 
-                            className="bg-blue-600 h-2 rounded-full" 
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
                             style={{ width: `${region.demand}%` }}
+                            aria-label={`Market demand: ${region.demand}%`}
+                            title={`Market demand: ${region.demand}%`}
                           ></div>
                         </div>
                       </div>
@@ -419,8 +421,10 @@ const MarketInsightsPage: React.FC = () => {
                         <div className="text-xs text-gray-600 mb-1">Competition Level</div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div 
-                            className="bg-red-500 h-2 rounded-full" 
+                            className="bg-red-500 h-2 rounded-full transition-all duration-300" 
                             style={{ width: `${region.competition}%` }}
+                            aria-label={`Competition level: ${region.competition}%`}
+                            title={`Competition level: ${region.competition}%`}
                           ></div>
                         </div>
                       </div>

@@ -16,7 +16,6 @@ import {
   ThumbsUp, 
   Laugh, 
   Angry, 
-  Sad, 
   Plus, 
   X, 
   MessageCircle,
@@ -74,7 +73,7 @@ interface Conversation {
   consultationId?: number;
 }
 
-const MessagesPage = () => {
+const MessagesPage: React.FC = () => {
   const { user, token } = useAuth();
   const { 
     socket, 
@@ -102,7 +101,7 @@ const MessagesPage = () => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -210,6 +209,7 @@ const MessagesPage = () => {
       if (socket && isConnected) {
         socket.emit('send_message', {
           conversationId: activeConversation.id,
+          senderId: user?.id,
           content: `Shared a file: ${file.name}`,
           messageType: 'FILE',
           fileUrl: data.fileUrl,
@@ -220,176 +220,176 @@ const MessagesPage = () => {
       console.error('Error uploading file:', error);
     } finally {
       setUploadingFile(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
   const formatTime = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-    } catch {
-      return '';
-    }
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: false 
+    });
   };
 
   const getParticipantName = (participants: any[]) => {
-    const otherParticipant = participants?.find(p => p.id !== user?.id);
-    return otherParticipant ? `${otherParticipant.firstName} ${otherParticipant.lastName || ''}`.trim() : 'Unknown User';
+    const otherParticipant = participants.find(p => p.id !== user?.id);
+    return otherParticipant?.firstName || otherParticipant?.name || 'Unknown User';
   };
 
-  const filteredConversations = conversations.filter(conv =>
-    conv.participants.some(p => 
-      `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())
-  return (
-    otherParticipant.firstName?.toLowerCase().includes(searchLower) ||
-    otherParticipant.lastName?.toLowerCase().includes(searchLower) ||
-    otherParticipant.email?.toLowerCase().includes(searchLower)
-  );
-});
-
-// Check if anyone is typing (excluding current user)
-const isAnyoneTyping = typingUsers.some(userId => userId !== user?.id);
-const typingUsersList = typingUsers
-  .filter(userId => userId !== user?.id)
-  .map(userId => {
-    const typingUser = activeConversation?.participants.find(p => p.id === userId);
-    return typingUser ? typingUser.firstName : 'Someone';
+  const filteredConversations = conversations.filter(conv => {
+    const participantName = getParticipantName(conv.participants);
+    return participantName.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
-return (
-  <div className="flex h-screen bg-gray-50">
-    {/* Sidebar - Conversations List */}
-    <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
-          <div className="flex items-center space-x-2">
-            <div className={`flex items-center space-x-1 text-sm ${
-              isConnected ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {isConnected ? (
-                <><Wifi className="h-4 w-4" /> <span>Connected</span></>
-              ) : (
-                <><WifiOff className="h-4 w-4" /> <span>Disconnected</span></>
-              )}
+  // Check if anyone is typing (excluding current user)
+  const isAnyoneTyping = Array.isArray(typingUsers) ? typingUsers.some((userId: any) => userId !== user?.id) : false;
+  const typingUsersList = Array.isArray(typingUsers) ? typingUsers
+    .filter((userId: any) => userId !== user?.id)
+    .map((userId: any) => {
+      const typingUser = activeConversation?.participants.find(p => p.id === userId);
+      return typingUser ? typingUser.firstName : 'Someone';
+    }) : [];
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar - Conversations List */}
+      <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
+            <div className="flex items-center space-x-2">
+              <div className={`flex items-center space-x-1 text-sm ${
+                isConnected ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {isConnected ? (
+                  <><Wifi className="h-4 w-4" /> <span>Connected</span></>
+                ) : (
+                  <><WifiOff className="h-4 w-4" /> <span>Disconnected</span></>
+                )}
+              </div>
+              <button 
+                className="p-2 hover:bg-gray-100 rounded-lg"
+                title="Start new conversation"
+              >
+                <Plus className="h-5 w-5 text-gray-600" />
+              </button>
             </div>
-            <button 
-              className="p-2 hover:bg-gray-100 rounded-lg"
-              title="Start new conversation"
-            >
-              <Plus className="h-5 w-5 text-gray-600" />
-            </button>
+          </div>
+          
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search conversations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              aria-label="Search conversations"
+            />
           </div>
         </div>
         
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search conversations..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            aria-label="Search conversations"
-          />
-        </div>
-      </div>
-
-      {/* Conversations List */}
-      <div className="flex-1 overflow-y-auto">
-        {conversations.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">
-            {searchTerm ? 'No conversations found' : 'No conversations yet'}
-          </div>
-        ) : (
-          filteredConversations.map((conversation) => {
-            const otherParticipant = conversation.participants?.find(p => p.id !== user?.id);
-            const isOnline = otherParticipant ? isUserOnline(otherParticipant.id) : false;
-            const participantName = getParticipantName(conversation.participants || []);
-            
-            return (
-              <div
-                key={conversation.id}
-                onClick={() => setActiveConversation(conversation)}
-                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                  activeConversation?.id === conversation.id ? 'bg-blue-50 border-r-2 border-r-blue-500' : ''
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
-                      {otherParticipant?.firstName?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
-                    {isOnline && (
-                      <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
-                    )}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-medium text-gray-900 truncate">
-                        {participantName}
-                      </h3>
-                      <span className="text-xs text-gray-500">
-                        {conversation.lastMessage ? formatTime(conversation.lastMessage.createdAt) : ''}
-                      </span>
+        {/* Conversations List */}
+        <div className="flex-1 overflow-y-auto">
+          {conversations.length === 0 ? (
+            <div className="p-4 text-center text-gray-500">
+              {searchTerm ? 'No conversations found' : 'No conversations yet'}
+            </div>
+          ) : (
+            filteredConversations.map((conversation) => {
+              const otherParticipant = conversation.participants?.find(p => p.id !== user?.id);
+              const isOnline = otherParticipant ? isUserOnline(otherParticipant.id) : false;
+              const participantName = getParticipantName(conversation.participants || []);
+              
+              return (
+                <div
+                  key={conversation.id}
+                  onClick={() => setActiveConversation(conversation)}
+                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                    activeConversation?.id === conversation.id ? 'bg-blue-50 border-r-2 border-r-blue-500' : ''
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="relative">
+                      <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
+                        {otherParticipant?.firstName?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      {isOnline && (
+                        <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
+                      )}
                     </div>
                     
-                    <p className="text-sm text-gray-600 truncate mt-1">
-                      {conversation.lastMessage.type === 'image' ? '📷 Image' :
-                       conversation.lastMessage.type === 'file' ? '📎 File' :
-                       conversation.lastMessage.content}
-                    </p>
-                  </div>
-                  
-                  {conversation.unreadCount > 0 && (
-                    <div className="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {conversation.unreadCount}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-medium text-gray-900 truncate">
+                          {participantName}
+                        </h3>
+                        <span className="text-xs text-gray-500">
+                          {conversation.lastMessage ? formatTime(conversation.lastMessage.createdAt) : ''}
+                        </span>
+                      </div>
+                      
+                      <p className="text-sm text-gray-600 truncate mt-1">
+                        {conversation.lastMessage?.messageType === 'FILE' ? '📎 File' :
+                         conversation.lastMessage?.content || 'No messages yet'}
+                      </p>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col">
-        {selectedConversation ? (
+        {activeConversation ? (
           <>
             {/* Chat Header */}
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img
-                  src={selectedConversation.participants.find(p => p.id !== user?.id)?.profilePicture || '/default-avatar.png'}
-                  alt="Profile"
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
+                  {getParticipantName(activeConversation.participants).charAt(0).toUpperCase()}
                 </div>
+                <div>
+                  <h3 className="font-medium text-gray-900">
+                    {getParticipantName(activeConversation.participants)}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {(() => {
+                      const otherParticipant = activeConversation.participants.find((p: any) => p.id !== user?.id);
+                      return otherParticipant && isUserOnline(otherParticipant.id) ? 'Online' : 'Offline';
+                    })()}
+                  </p>
+                </div>
+              </div>
                 
-                <div className="flex items-center space-x-2">
-                  <button 
-                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
-                    title="Voice call"
-                  >
-                    <Phone className="h-5 w-5" />
-                  </button>
-                  <button 
-                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
-                    title="Video call"
-                  >
-                    <Video className="h-5 w-5" />
-                  </button>
-                  <button 
-                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
-                    title="Conversation info"
-                  >
-                    <Info className="h-5 w-5" />
-                  </button>
-                </div>
+              <div className="flex items-center space-x-2">
+                <button 
+                  className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                  title="Voice call"
+                >
+                  <Phone className="h-5 w-5" />
+                </button>
+                <button 
+                  className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                  title="Video call"
+                >
+                  <Video className="h-5 w-5" />
+                </button>
+                <button 
+                  className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                  title="Conversation info"
+                >
+                  <Info className="h-5 w-5" />
+                </button>
               </div>
             </div>
 
@@ -440,13 +440,12 @@ return (
                         }`}>
                           {formatTime(message.createdAt)}
                         </span>
-                        
                         {isOwn && (
-                          <div className="flex items-center">
+                          <div className="flex items-center space-x-1">
                             {message.isRead ? (
-                              <CheckCheck className="h-3 w-3 text-blue-100" title="Read" />
+                              <CheckCheck className="h-3 w-3 text-blue-100" />
                             ) : (
-                              <Check className="h-3 w-3 text-blue-100" title="Sent" />
+                              <Check className="h-3 w-3 text-blue-100" />
                             )}
                           </div>
                         )}
@@ -485,6 +484,7 @@ return (
                   ref={fileInputRef}
                   onChange={handleFileUpload}
                   className="hidden"
+                  aria-label="Attach file"
                   accept="*/*"
                 />
                 

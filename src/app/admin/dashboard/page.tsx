@@ -318,8 +318,12 @@ const AdminDashboard = () => {
                       {pieData.map((item, index) => (
                         <div key={index} className="flex items-center">
                           <div 
-                            className="w-3 h-3 rounded-full mr-2" 
-                            style={{ backgroundColor: item.color }}
+                            className={`w-3 h-3 rounded-full mr-2 ${
+                              item.color === '#3b82f6' ? 'bg-blue-500' :
+                              item.color === '#10b981' ? 'bg-green-500' :
+                              item.color === '#f59e0b' ? 'bg-amber-500' :
+                              'bg-gray-500'
+                            }`}
                             aria-hidden="true"
                           ></div>
                           <span className="text-sm text-gray-600">{item.name}: {item.value.toLocaleString()}</span>
@@ -510,6 +514,8 @@ const AdminDashboard = () => {
                         type="text"
                         placeholder="Search listings..."
                         className="border border-gray-300 rounded-md px-3 py-2 text-sm w-64"
+                        aria-label="Search listings"
+                        title="Search for listings"
                       />
                     </div>
                     <div className="flex space-x-2">
@@ -1067,16 +1073,15 @@ const AdminDashboard = () => {
                     </ResponsiveContainer>
                     <div className="flex justify-center flex-wrap gap-4 mt-4">
                       {[
-                        { name: 'Direct', value: 4200, color: '#3b82f6' },
-                        { name: 'Search Engines', value: 3100, color: '#10b981' },
-                        { name: 'Social Media', value: 2800, color: '#f59e0b' },
-                        { name: 'Referrals', value: 1900, color: '#ef4444' },
-                        { name: 'Email', value: 1200, color: '#8b5cf6' }
+                        { name: 'Direct', value: 4200, color: 'bg-blue-500' },
+                        { name: 'Search Engines', value: 3100, color: 'bg-green-500' },
+                        { name: 'Social Media', value: 2800, color: 'bg-amber-500' },
+                        { name: 'Referrals', value: 1900, color: 'bg-red-500' },
+                        { name: 'Email', value: 1200, color: 'bg-purple-500' }
                       ].map((item, index) => (
                         <div key={index} className="flex items-center">
                           <div 
-                            className="w-3 h-3 rounded-full mr-2" 
-                            style={{ backgroundColor: item.color }}
+                            className={`w-3 h-3 rounded-full mr-2 ${item.color}`}
                             aria-hidden="true"
                           ></div>
                           <span className="text-sm text-gray-600">{item.name}: {item.value.toLocaleString()}</span>
@@ -1145,8 +1150,10 @@ const AdminDashboard = () => {
                             <p className="font-medium text-gray-900">{item.percentage}</p>
                             <div className="w-16 bg-gray-200 rounded-full h-2 mt-1">
                               <div 
-                                className="bg-blue-600 h-2 rounded-full" 
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
                                 style={{ width: item.percentage }}
+                                aria-label={`Progress: ${item.percentage}`}
+                                role="progressbar"
                               ></div>
                             </div>
                           </div>
@@ -1845,6 +1852,8 @@ const AdminDashboard = () => {
                         type="text"
                         defaultValue="AfroAsiaConnect"
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        aria-label="Platform name"
+                        title="Enter the platform name"
                       />
                     </div>
                     <div>
@@ -1892,7 +1901,12 @@ const AdminDashboard = () => {
                         <p className="text-sm text-gray-500">Enable platform maintenance mode</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" />
+                        <input 
+                          type="checkbox" 
+                          className="sr-only peer"
+                          aria-label="Toggle maintenance mode"
+                          title="Enable or disable maintenance mode"
+                        />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
@@ -1912,7 +1926,13 @@ const AdminDashboard = () => {
                         <p className="text-sm text-gray-500">Require 2FA for admin accounts</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked className="sr-only peer" />
+                        <input 
+                          type="checkbox" 
+                          defaultChecked 
+                          className="sr-only peer"
+                          aria-label="Toggle two-factor authentication"
+                          title="Enable or disable two-factor authentication"
+                        />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
@@ -1957,7 +1977,12 @@ const AdminDashboard = () => {
                         <p className="text-sm text-gray-500">Restrict admin access by IP</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" />
+                        <input 
+                          type="checkbox" 
+                          className="sr-only peer"
+                          aria-label="Toggle IP whitelist"
+                          title="Enable or disable IP whitelist restriction"
+                        />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
@@ -1980,6 +2005,8 @@ const AdminDashboard = () => {
                         type="text"
                         defaultValue="smtp.afroasiaconnect.com"
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        aria-label="SMTP server address"
+                        title="Enter SMTP server address"
                       />
                     </div>
                     <div>
@@ -1988,6 +2015,8 @@ const AdminDashboard = () => {
                         type="number"
                         defaultValue="587"
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        aria-label="SMTP port number"
+                        title="Enter SMTP port number"
                       />
                     </div>
                     <div>
@@ -2006,7 +2035,13 @@ const AdminDashboard = () => {
                         <p className="text-sm text-gray-500">Enable encryption</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked className="sr-only peer" />
+                        <input 
+                          type="checkbox" 
+                          defaultChecked 
+                          className="sr-only peer"
+                          aria-label="Toggle SSL/TLS encryption"
+                          title="Enable or disable SSL/TLS encryption"
+                        />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
@@ -2023,7 +2058,11 @@ const AdminDashboard = () => {
                   <CardContent className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Default Currency</label>
-                      <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                      <select 
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        aria-label="Default currency selection"
+                        title="Select the default platform currency"
+                      >
                         <option value="USD">USD - US Dollar</option>
                         <option value="EUR">EUR - Euro</option>
                         <option value="GBP">GBP - British Pound</option>
@@ -2049,7 +2088,13 @@ const AdminDashboard = () => {
                         <p className="text-sm text-gray-500">Enable Stripe payments</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked className="sr-only peer" />
+                        <input 
+                          type="checkbox" 
+                          defaultChecked 
+                          className="sr-only peer"
+                          aria-label="Toggle Stripe gateway"
+                          title="Enable or disable Stripe payment gateway"
+                        />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
@@ -2059,7 +2104,13 @@ const AdminDashboard = () => {
                         <p className="text-sm text-gray-500">Enable PayPal payments</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked className="sr-only peer" />
+                        <input 
+                          type="checkbox" 
+                          defaultChecked 
+                          className="sr-only peer"
+                          aria-label="Toggle PayPal gateway"
+                          title="Enable or disable PayPal payment gateway"
+                        />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
@@ -2080,11 +2131,17 @@ const AdminDashboard = () => {
                         type="number"
                         defaultValue="1000"
                         className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        aria-label="API rate limit per minute"
+                        title="Enter API rate limit requests per minute"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">API Version</label>
-                      <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                      <select 
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        aria-label="API version selection"
+                        title="Select the API version to use"
+                      >
                         <option value="v1">Version 1.0</option>
                         <option value="v2">Version 2.0 (Beta)</option>
                       </select>
@@ -2095,7 +2152,13 @@ const AdminDashboard = () => {
                         <p className="text-sm text-gray-500">Public API docs</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked className="sr-only peer" />
+                        <input 
+                          type="checkbox" 
+                          defaultChecked 
+                          className="sr-only peer"
+                          aria-label="Toggle API documentation"
+                          title="Enable or disable public API documentation"
+                        />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
@@ -2105,7 +2168,13 @@ const AdminDashboard = () => {
                         <p className="text-sm text-gray-500">Cross-origin requests</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" defaultChecked className="sr-only peer" />
+                        <input 
+                          type="checkbox" 
+                          defaultChecked 
+                          className="sr-only peer"
+                          aria-label="Toggle CORS policy"
+                          title="Enable or disable CORS policy for cross-origin requests"
+                        />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
@@ -2130,7 +2199,13 @@ const AdminDashboard = () => {
                           <p className="text-sm text-gray-500">Monitor CPU, memory, and disk usage</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" defaultChecked className="sr-only peer" />
+                          <input 
+                            type="checkbox" 
+                            defaultChecked 
+                            className="sr-only peer"
+                            aria-label="Toggle system health monitoring"
+                            title="Enable or disable system health monitoring"
+                          />
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                         </label>
                       </div>
@@ -2140,6 +2215,8 @@ const AdminDashboard = () => {
                           type="number"
                           defaultValue="85"
                           className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                          aria-label="Alert threshold percentage"
+                          title="Enter alert threshold percentage"
                         />
                       </div>
                       <div>
@@ -2148,6 +2225,8 @@ const AdminDashboard = () => {
                           type="number"
                           defaultValue="30"
                           className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                          aria-label="Log retention days"
+                          title="Enter log retention period in days"
                         />
                       </div>
                     </div>
@@ -2171,6 +2250,8 @@ const AdminDashboard = () => {
                           type="number"
                           defaultValue="7"
                           className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                          aria-label="Backup retention days"
+                          title="Enter backup retention period in days"
                         />
                       </div>
                       <div className="flex space-x-2">

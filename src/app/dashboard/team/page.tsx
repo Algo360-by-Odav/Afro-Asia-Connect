@@ -614,8 +614,7 @@ export default function TeamPage() {
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: role.color }}
+                          className="w-3 h-3 rounded-full bg-blue-500" 
                         />
                         {role.name}
                       </CardTitle>
