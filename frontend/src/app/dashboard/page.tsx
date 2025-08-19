@@ -61,7 +61,7 @@ export default function DashboardPage() {
       const fetchDashboardMetrics = async () => {
         try {
           setMetricsLoading(true);
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/metrics`, { 
+          const response = await fetch(`http://localhost:3001/api/dashboard/metrics`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
           });
           if (!response.ok) throw new Error('Failed to fetch dashboard metrics');
@@ -89,7 +89,7 @@ export default function DashboardPage() {
     const fetchNotifications = async () => {
       setNotificationsLoading(true);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/notifications`, { 
+        const response = await fetch(`http://localhost:3001/api/dashboard/notifications`, { 
           headers: { 'Authorization': `Bearer ${token}` } 
         });
         if (!response.ok) throw new Error('Failed to fetch notifications');
@@ -112,7 +112,7 @@ export default function DashboardPage() {
     const fetchRecentActivities = async () => {
       setActivitiesLoading(true);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/recent-activity`, { 
+        const response = await fetch(`http://localhost:3001/api/dashboard/activities`, { 
           headers: { 'Authorization': `Bearer ${token}` } 
         });
         if (!response.ok) throw new Error('Failed to fetch recent activities');

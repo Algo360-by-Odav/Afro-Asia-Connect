@@ -78,13 +78,15 @@ function AuthFormContent({ initialMode = 'login' }: AuthFormProps) {
       return;
     }
 
-    const endpoint = mode === 'login' ? `${API_BASE_URL}/api/auth/login` : `${API_BASE_URL}/api/auth/register`;
+    const endpoint = mode === 'login' ? 'http://localhost:3001/api/auth/login' : 'http://localhost:3001/api/auth/register';
     const body = mode === 'login' ? 
       { email: formData.email, password: formData.password } : 
       { email: formData.email, password: formData.password, user_type: formData.accountType, /* Add other registration fields like first_name, last_name if your backend expects them */ };
 
     try {
       console.log('[AuthForm] handleSubmit: Attempting to login with email:', formData.email);
+      console.log('[AuthForm] API endpoint:', endpoint);
+      console.log('[AuthForm] Request body:', JSON.stringify(body));
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {

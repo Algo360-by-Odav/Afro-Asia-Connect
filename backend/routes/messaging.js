@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../prismaClient');
-const { authenticateToken } = require('../middleware/auth');
+const authenticateToken = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -37,7 +37,7 @@ const upload = multer({
 });
 
 // Get conversations for user with advanced features
-router.get('/conversations', authMiddleware, async (req, res) => {
+router.get('/conversations', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { page = 1, limit = 20, search, unreadOnly } = req.query;
@@ -45,19 +45,17 @@ router.get('/conversations', authMiddleware, async (req, res) => {
 
     const whereClause = {
       participants: {
-        some: { userId: userId }
+        some: { id: userId }
       },
       ...(search && {
         OR: [
           { title: { contains: search, mode: 'insensitive' } },
           { participants: {
             some: {
-              user: {
-                OR: [
-                  { firstName: { contains: search, mode: 'insensitive' } },
-                  { lastName: { contains: search, mode: 'insensitive' } }
-                ]
-              }
+              OR: [
+                { firstName: { contains: search, mode: 'insensitive' } },
+                { lastName: { contains: search, mode: 'insensitive' } }
+              ]
             }
           }}
         ]
@@ -161,7 +159,7 @@ router.get('/conversations', authMiddleware, async (req, res) => {
 });
 
 // Create or get conversation
-router.post('/conversations', authMiddleware, async (req, res) => {
+router.post('/conversations', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { participantIds, title, type = 'direct' } = req.body;
@@ -253,7 +251,7 @@ router.post('/conversations', authMiddleware, async (req, res) => {
 });
 
 // Get messages for conversation with advanced features
-router.get('/conversations/:id/messages', authMiddleware, async (req, res) => {
+router.get('/conversations/:id/messages', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
@@ -362,7 +360,7 @@ router.get('/conversations/:id/messages', authMiddleware, async (req, res) => {
 });
 
 // Send message with advanced features
-router.post('/conversations/:id/messages', authMiddleware, async (req, res) => {
+router.post('/conversations/:id/messages', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
@@ -444,7 +442,7 @@ router.post('/conversations/:id/messages', authMiddleware, async (req, res) => {
 });
 
 // Upload file for message
-router.post('/upload', authMiddleware, upload.single('file'), async (req, res) => {
+router.post('/upload', authenticateToken, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -475,7 +473,7 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
 });
 
 // Search messages across conversations
-router.get('/search', authMiddleware, async (req, res) => {
+router.get('/search', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { q, conversationId, page = 1, limit = 20 } = req.query;
@@ -545,7 +543,7 @@ router.get('/search', authMiddleware, async (req, res) => {
 });
 
 // Add reaction to message
-router.post('/messages/:messageId/reactions', authMiddleware, async (req, res) => {
+router.post('/messages/:messageId/reactions', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { messageId } = req.params;
@@ -608,7 +606,7 @@ router.post('/messages/:messageId/reactions', authMiddleware, async (req, res) =
 });
 
 // Mark messages as read
-router.put('/conversations/:conversationId/read', authMiddleware, async (req, res) => {
+router.put('/conversations/:conversationId/read', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { conversationId } = req.params;
@@ -650,7 +648,7 @@ router.put('/conversations/:conversationId/read', authMiddleware, async (req, re
 });
 
 // Delete message
-router.delete('/messages/:messageId', authMiddleware, async (req, res) => {
+router.delete('/messages/:messageId', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { messageId } = req.params;
@@ -692,7 +690,7 @@ router.delete('/messages/:messageId', authMiddleware, async (req, res) => {
 });
 
 // Get conversation participants
-router.get('/conversations/:id/participants', authMiddleware, async (req, res) => {
+router.get('/conversations/:id/participants', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;

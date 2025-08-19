@@ -41,28 +41,30 @@ router.get('/metrics', authenticateToken, async (req, res) => {
       console.log('Using mock data for profile views');
     }
 
-    // Get user subscription info
+    // Get user subscription info (using available User fields)
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { 
-        subscription_plan: true,
-        subscription_expires: true,
-        subscription_status: true
+        id: true,
+        email: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+        isActive: true
       }
     });
 
     if (user) {
-      metrics.subscription.plan = user.subscription_plan || 'Basic Plan';
-      metrics.subscription.status = user.subscription_status || 'active';
+      metrics.subscription.plan = 'Basic Plan'; // Mock data since subscription fields don't exist
+      metrics.subscription.status = 'active';
       
-      // Calculate days until renewal
-      if (user.subscription_expires) {
-        const expiryDate = new Date(user.subscription_expires);
-        const today = new Date();
-        const diffTime = expiryDate - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        metrics.subscription.renewsIn = Math.max(0, diffDays);
-      }
+      // Mock renewal date (30 days from now)
+      const mockExpiryDate = new Date();
+      mockExpiryDate.setDate(mockExpiryDate.getDate() + 30);
+      const today = new Date();
+      const diffTime = mockExpiryDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      metrics.subscription.renewsIn = Math.max(0, diffDays);
     }
 
     res.json({
@@ -100,14 +102,12 @@ router.get('/notifications', authenticateToken, async (req, res) => {
         {
           userId: userId,
           type: 'info',
-          title: 'Welcome to AfroAsiaConnect!',
           message: 'Complete your profile to get more visibility.',
           isRead: false
         },
         {
           userId: userId,
           type: 'success',
-          title: 'Profile Updated',
           message: 'Your profile has been successfully updated.',
           isRead: false
         }

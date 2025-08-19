@@ -279,7 +279,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
           </div>
           
           {/* AI Conversation Insights */}
-          {activeConversation && aiEnabled && (
+          {activeConversation && activeConversation.id && aiEnabled && (
             <div className="p-4 border-t border-gray-200">
               <ConversationSentiment
                 conversationId={activeConversation.id.toString()}
