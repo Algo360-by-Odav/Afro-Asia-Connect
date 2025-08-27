@@ -6,11 +6,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 
-export async function generateStaticParams() {
-  // Return empty array for static export - pages will be generated on demand
-  return [];
-}
-
 interface ListingFormState {
   business_name: string;
   business_category: string;

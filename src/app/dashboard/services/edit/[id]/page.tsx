@@ -7,11 +7,6 @@ import { useParams } from 'next/navigation';
 import { API_BASE_URL } from '@/config/api';
 import EditServiceForm from '@/app/components/services/EditServiceForm';
 
-export async function generateStaticParams() {
-  // Return empty array for static export - pages will be generated on demand
-  return [];
-}
-
 export default function EditServicePage() {
   const { user, token, isLoading } = useAuth();
   const params = useParams();

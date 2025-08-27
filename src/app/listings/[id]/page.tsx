@@ -8,11 +8,6 @@ import { useParams, useRouter } from 'next/navigation';
 // import { BusinessListing } from '../../components/listings/ListingCard'; // Original interface
 import Link from 'next/link';
 
-export async function generateStaticParams() {
-  // Return empty array for static export - pages will be generated on demand
-  return [];
-}
-
 // Define the structure for individual products within products_info
 interface ProductDetail {
   name: string;
