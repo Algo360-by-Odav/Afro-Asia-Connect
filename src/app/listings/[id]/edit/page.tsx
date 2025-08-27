@@ -6,6 +6,11 @@ import { useAuth } from '../../../../context/AuthContext';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
 
+export async function generateStaticParams() {
+  // Return empty array for static export - pages will be generated on demand
+  return [];
+}
+
 // For now, let's define the Listing interface here, ideally this would be shared
 interface Listing {
   id: number;

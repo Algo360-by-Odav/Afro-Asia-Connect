@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import NotificationsCard from '../components/dashboard/NotificationsCard';
 import RecentActivityCard from '../components/dashboard/RecentActivityCard';
+import ChatWidget from '../components/messaging/ChatWidget';
 import {
   UserCircle,
   LayoutGrid,
@@ -343,6 +344,9 @@ export default function DashboardPage() {
           </div>
         </div>
       </main> {/* Closing main tag */}
+      
+      {/* Chat Widget */}
+      <ChatWidget />
     </div>
   );
 }

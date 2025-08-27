@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, FormEvent } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import ChatWidget from '../../components/messaging/ChatWidget';
 
 export default function ProfilePage() {
   const { user, token, isLoading: authLoading } = useAuth();
@@ -138,6 +139,9 @@ export default function ProfilePage() {
           {isSubmitting ? 'Saving...' : 'Save Changes'}
         </button>
       </form>
+      
+      {/* Chat Widget */}
+      <ChatWidget />
     </div>
   );
 }
