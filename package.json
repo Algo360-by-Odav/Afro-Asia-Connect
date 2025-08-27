@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/build.js",
-    "build:next": "next build",
+    "build": "next build",
+    "build:custom": "node scripts/build.js",
     "build:force": "cross-env DISABLE_ESLINT_PLUGIN=true ESLINT_NO_DEV_ERRORS=true ESLINT_IGNORE_DURING_BUILDS=true next build",
     "start": "next start",
     "lint": "next lint",
