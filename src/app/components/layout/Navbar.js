@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import ChatModal from '@/app/components/messaging/ChatModal';
 
 export default function Navbar() {
   const pathname = usePathname();
   const { user, loading, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -81,6 +83,14 @@ export default function Navbar() {
                      className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors duration-200 ${pathname.startsWith('/dashboard') || pathname.startsWith('/admin') ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-200 hover:bg-white/10 hover:text-white'}`}>
                       {user.isAdmin ? 'Admin Panel' : 'Dashboard'}
                   </Link>
+                  
+                  <button
+                    onClick={() => setIsChatOpen(true)}
+                    className="px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors duration-200 text-gray-200 hover:bg-white/10 hover:text-white flex items-center space-x-1"
+                  >
+                    <span>💬</span>
+                    <span>Messages</span>
+                  </button>
 
                   {user && user.user_type === 'Seller' && (
                     <Link href="/listings/create"
@@ -188,6 +198,13 @@ export default function Navbar() {
                    className={`block px-3 py-2 text-base font-medium rounded-md transition-colors duration-200 ${pathname.startsWith('/dashboard') || pathname.startsWith('/admin') ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-200 hover:bg-white/10 hover:text-white'}`}>
                     {user.isAdmin ? 'Admin Panel' : 'Dashboard'}
                 </Link>
+                
+                <button
+                  onClick={() => setIsChatOpen(true)}
+                  className="block px-3 py-2 text-base font-medium rounded-md transition-colors duration-200 text-gray-200 hover:bg-white/10 hover:text-white text-left"
+                >
+                  💬 Messages
+                </button>
                 {user.user_type === 'Seller' && (
                   <Link href="/listings/create"
                      className={`block px-3 py-2 rounded-md text-base font-medium text-white bg-[var(--cta-emerald)]/80 hover:bg-[var(--cta-emerald)]`}>
@@ -222,6 +239,12 @@ export default function Navbar() {
           </div>
         </div>
       </div>
+      
+      {/* Chat Modal */}
+      <ChatModal 
+        isOpen={isChatOpen} 
+        onClose={() => setIsChatOpen(false)} 
+      />
     </nav>
   );
 }

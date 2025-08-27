@@ -11,6 +11,7 @@ import AnalyticsDashboard from './AnalyticsDashboard';
 import SmartSuggestions from './SmartSuggestions';
 import SentimentIndicator, { ConversationSentiment } from './SentimentIndicator';
 import AutoComplete from './AutoComplete';
+import NotificationSettings from './NotificationSettings';
 
 export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { user } = useAuth();
@@ -38,7 +39,9 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
   const [showTemplates, setShowTemplates] = useState(false);
   const [showScheduler, setShowScheduler] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(true);
+  const [showMobileConversations, setShowMobileConversations] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -140,8 +143,8 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[600px] flex relative">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-full sm:h-5/6 flex overflow-hidden">
         {/* Top Right Controls */}
         <div className="absolute top-4 right-4 flex items-center space-x-2 z-10">
           {/* Feature buttons */}
@@ -169,10 +172,17 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
             </button>
             <button
               onClick={() => setShowAnalytics(true)}
-              className="p-1.5 text-gray-500 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
+              className="p-1.5 text-gray-500 hover:text-blue-900 hover:bg-blue-900/10 rounded-md transition-colors"
               title="View analytics"
             >
               📊
+            </button>
+            <button
+              onClick={() => setShowNotificationSettings(true)}
+              className="p-1.5 text-gray-500 hover:text-blue-900 hover:bg-blue-900/10 rounded-md transition-colors"
+              title="Notification settings"
+            >
+              🔔
             </button>
             <button
               onClick={() => setAiEnabled(!aiEnabled)}
@@ -197,7 +207,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
         </div>
         
         {/* Left Sidebar - Conversations */}
-        <div className="w-1/3 border-r border-gray-200 flex flex-col bg-blue-900 text-white">
+        <div className="hidden sm:flex sm:w-1/3 border-r border-gray-200 flex-col bg-blue-900 text-white">
           {/* Header */}
           <div className="p-4 border-b border-blue-800">
             <h3 className="text-lg font-semibold text-white">Messages</h3>
@@ -249,7 +259,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-1 sm:space-x-2">
                           <div className="font-medium text-sm text-white">
                             {otherUser?.firstName || otherUser?.lastName || 'Unknown User'}
                           </div>
@@ -295,12 +305,75 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
           )}
         </div>
 
+        {/* Mobile Conversation List Toggle */}
+        <div className="sm:hidden bg-blue-900 text-white p-3 border-b border-blue-800">
+          <button 
+            onClick={() => setShowMobileConversations(!showMobileConversations)}
+            className="flex items-center space-x-2 text-white"
+          >
+            <span>📱</span>
+            <span>Conversations</span>
+            <span className={`transform transition-transform ${showMobileConversations ? 'rotate-180' : ''}`}>▼</span>
+          </button>
+        </div>
+
+        {/* Mobile Conversation List */}
+        {showMobileConversations && (
+          <div className="sm:hidden bg-blue-900 text-white max-h-64 overflow-y-auto">
+            {conversations.length === 0 ? (
+              <div className="text-center py-8 px-4">
+                <div className="text-4xl mb-2">💬</div>
+                <p className="text-blue-200 text-sm">No conversations yet</p>
+              </div>
+            ) : (
+              conversations.map((conversation) => {
+                const otherUser = getOtherParticipant(conversation);
+                const unreadCount = conversation._count?.messages || 0;
+                
+                return (
+                  <div
+                    key={conversation.id}
+                    className={`p-3 border-b border-blue-800 cursor-pointer hover:bg-blue-800 ${activeConversation?.id === conversation.id ? 'bg-blue-800' : ''}`}
+                    onClick={() => {
+                      setActiveConversation(conversation);
+                      setShowMobileConversations(false);
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <div className="font-medium text-sm text-white">
+                            {otherUser?.firstName || otherUser?.lastName || 'Unknown User'}
+                          </div>
+                          {otherUser && (
+                            <div className={`w-2 h-2 rounded-full ${isUserOnline(otherUser.id) ? 'bg-green-500' : 'bg-gray-400'}`} />
+                          )}
+                        </div>
+                        {conversation.lastMessage && (
+                          <div className="text-xs text-blue-200 truncate">
+                            {conversation.lastMessage.content}
+                          </div>
+                        )}
+                      </div>
+                      {unreadCount > 0 && (
+                        <div className="bg-white text-blue-900 text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                          {unreadCount}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
         {/* Chat Area */}
         <div className="flex-1 flex flex-col">
           {activeConversation ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b border-gray-200">
+              <div className="p-3 sm:p-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-semibold">
@@ -328,7 +401,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
                 {messages.map((message) => {
                   const isOwnMessage = message.senderId === Number(user?.id);
                   
@@ -338,7 +411,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                       className={`flex ${Number(message.senderId) === Number(user?.id) ? 'justify-end' : 'justify-start'} mb-2`}
                     >
                       <div
-                        className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${
+                        className={`max-w-[250px] sm:max-w-xs lg:max-w-md px-2 sm:px-3 py-2 rounded-lg text-sm sm:text-base ${
                           Number(message.senderId) === Number(user?.id)
                             ? 'bg-blue-900 text-white'
                             : 'bg-gray-200 text-gray-800'
@@ -392,7 +465,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
               )}
 
               {/* Message Input */}
-              <form onSubmit={(e) => e.preventDefault()} className="p-4 border-t border-gray-200">
+              <div className="p-2 sm:p-4 border-t border-gray-200">
                 {selectedFile && (
                   <div className="mb-3 p-2 bg-blue-900/10 rounded-lg flex items-center justify-between">
                     <span className="text-sm text-blue-900">📎 {selectedFile.name}</span>
@@ -411,7 +484,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                     onClose={() => setShowEmojiPicker(false)}
                   />
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex items-center space-x-1 sm:space-x-2">
                   <input
                     type="file"
                     onChange={handleFileSelect}
@@ -421,28 +494,28 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                   />
                   <label
                     htmlFor="file-upload"
-                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer"
+                    className="px-2 sm:px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 cursor-pointer text-sm sm:text-base"
                     title="Attach file"
                   >
                     📎
                   </label>
                   <button
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    className="px-2 sm:px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm sm:text-base"
                     title="Add emoji"
                   >
                     😀
                   </button>
                   <button
                     onClick={() => setShowTemplates(true)}
-                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    className="hidden sm:block px-2 sm:px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm sm:text-base"
                     title="Use template"
                   >
                     📋
                   </button>
                   <button
                     onClick={() => setShowScheduler(true)}
-                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    className="hidden sm:block px-2 sm:px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm sm:text-base"
                     title="Schedule message"
                   >
                     ⏰
@@ -474,13 +547,13 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                   )}
                   <button
                     onClick={handleSendMessage}
-                    disabled={isUploading || (!newMessage.trim() && !selectedFile)}
-                    className="px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={(!newMessage.trim() && !selectedFile) || isUploading}
+                    className="bg-blue-900 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                   >
                     {isUploading ? 'Uploading...' : 'Send'}
                   </button>
                 </div>
-              </form>
+              </div>
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center text-gray-500">
@@ -523,6 +596,12 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
       <AnalyticsDashboard
         isOpen={showAnalytics}
         onClose={() => setShowAnalytics(false)}
+      />
+      
+      {/* Notification Settings Modal */}
+      <NotificationSettings
+        isOpen={showNotificationSettings}
+        onClose={() => setShowNotificationSettings(false)}
       />
     </div>
   );

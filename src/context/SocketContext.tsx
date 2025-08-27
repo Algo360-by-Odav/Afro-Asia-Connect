@@ -1,8 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import { notificationService } from '@/utils/notifications';
 
 interface Message {
   id: number;
@@ -188,15 +189,33 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    newSocket.on('new_message', (message: any) => {
-      console.log('[Socket] New message received:', message);
+    newSocket.on('new_message', (message: Message) => {
+      console.log('[Socket] Received new message:', message);
       setMessages(prev => {
-        // Avoid duplicates by checking if message already exists
+        // Check if message already exists to prevent duplicates
         const exists = prev.some(m => m.id === message.id);
         if (exists) {
-          console.log('[Socket] Message already exists, skipping duplicate');
+          console.log('[Socket] Message already exists, skipping duplicate:', message.id);
           return prev;
         }
+        
+        // Show notification for messages from other users
+        if (message.senderId !== Number(user?.id)) {
+          // Find sender info from conversations
+          const conversation = conversations.find(c => c.id === message.conversationId);
+          const sender = conversation?.participants?.find(p => p.id === message.senderId);
+          const senderName = sender?.firstName || sender?.lastName || 'Someone';
+          
+          // Show notification if page is not visible or chat is not active
+          if (document.hidden || activeConversation?.id !== message.conversationId) {
+            notificationService.showMessageNotification(
+              senderName,
+              message.content,
+              message.conversationId.toString()
+            );
+          }
+        }
+        
         return [...prev, message];
       });
     });

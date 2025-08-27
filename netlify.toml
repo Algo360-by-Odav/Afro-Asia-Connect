@@ -1,10 +1,10 @@
 [build]
   publish = ".next"
-  command = "npm install && npm run build"
+  command = "npm install && npm install typescript @types/node @types/react @types/react-dom --no-save && npm run build:next"
 
 [build.environment]
-  NODE_VERSION = "18"
-  NPM_VERSION = "9"
+  NODE_VERSION = "20"
+  NPM_VERSION = "10"
 
 [context.production.environment]
   NODE_ENV = "production"
