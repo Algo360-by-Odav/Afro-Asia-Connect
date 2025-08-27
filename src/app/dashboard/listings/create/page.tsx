@@ -34,7 +34,9 @@ export default function CreateListingPage() {
 
   useEffect(() => {
     // Redirect if not loading, and not a seller or not logged in
-    if (!authLoading && (!user || user.user_type !== 'seller')) {
+    const userRole = user?.role || user?.user_type;
+    const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER';
+    if (!authLoading && (!user || !isSellerRole)) {
       router.push('/login?redirect=/dashboard/listings/create');
     }
   }, [user, authLoading, router]);
@@ -46,35 +48,19 @@ export default function CreateListingPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!token) { setError('Authentication token not found. Please log in again.'); return; }
-    setIsSubmitting(true); setError(null); setSuccessMessage(null);
-    try {
-      let response;
-      if (formData.logo_image_file) {
-        const fd = new FormData();
-        Object.entries(formData).forEach(([k,v])=>{
-          if(k==='logo_image_file' && v instanceof File){fd.append('logo_image',v);} else if(typeof v==='string'){fd.append(k,v);} });
-        response = await fetch('/api/listings', { method:'POST', body: fd, headers:{ 'Authorization': `Bearer ${token}` } });
-      } else {
-        response = await fetch('/api/listings', { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify(formData) });
-      }
-      const responseData = await response.json();
-      if(!response.ok) throw new Error(responseData.message||'Failed to create listing.');
-      setSuccessMessage('Listing created successfully! Redirecting...');
-      setTimeout(()=>router.push('/dashboard/listings'),2000);
-    } catch(err:any){ setError(err.message||'An unexpected error occurred.'); }
-    finally{ setIsSubmitting(false); }
-    e.preventDefault();
-    if (!token) {
-      setError('Authentication token not found. Please log in again.');
-      return;
+    if (!token) { 
+      setError('Authentication token not found. Please log in again.'); 
+      return; 
     }
-    setIsSubmitting(true);
-    setError(null);
+    
+    setIsSubmitting(true); 
+    setError(null); 
     setSuccessMessage(null);
 
     try {
-      const response = await fetch('/api/listings', { // Ensure this is your backend endpoint for creating listings
+      console.log('Submitting form data:', formData);
+      
+      const response = await fetch('http://127.0.0.1:3001/api/listings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,24 +70,33 @@ export default function CreateListingPage() {
       });
 
       const responseData = await response.json();
+      console.log('Response:', responseData);
 
       if (!response.ok) {
-        throw new Error(responseData.message || 'Failed to create listing.');
+        throw new Error(responseData.msg || responseData.message || 'Failed to create listing.');
       }
 
       setSuccessMessage('Listing created successfully! Redirecting...');
       setFormData({
+        logo_image_file: undefined,
+        logo_image_url: '',
         business_name: '',
         business_category: '',
         country_of_origin: '',
         description: '',
       });
+      
       setTimeout(() => {
-        router.push('/dashboard/listings'); // Or to the new listing's page: /listings/${responseData.id}
+        router.push('/dashboard/listings');
       }, 2000);
 
     } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred.');
+      console.error('Submit error:', err);
+      if (err.message.includes('Access denied')) {
+        setError('Access denied. Your session may be outdated. Please log out and log back in to refresh your permissions.');
+      } else {
+        setError(err.message || 'An unexpected error occurred.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -114,7 +109,9 @@ export default function CreateListingPage() {
 
   // If after loading, user is still not available or not a seller, show access denied.
   // This handles the case where useEffect might not have run yet or user is definitively not a seller.
-  if (!user || user.user_type !== 'seller') {
+  const userRole = user?.role || user?.user_type;
+  const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER';
+  if (!user || !isSellerRole) {
     return (
       <div className="p-6 text-center">
         <h1 className="text-2xl font-semibold text-red-600">Access Denied</h1>

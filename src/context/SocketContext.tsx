@@ -80,14 +80,45 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) return;
 
-    const newSocket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001', {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    console.log('[Socket] Attempting to connect to:', apiUrl);
+    
+    const newSocket = io(apiUrl, {
       withCredentials: true,
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
     });
 
     newSocket.on('connect', () => {
-      console.log(`[Socket] Connected successfully to ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}`);
+      console.log('[Socket] Connected successfully to', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001');
       setIsConnected(true);
-      newSocket.emit('join', Number(user.id));
+      
+      if (user?.id) {
+        console.log('[Socket] User joining with ID:', user.id);
+        newSocket.emit('join_user', user.id);
+        
+        // Test event emission to verify connection
+        newSocket.emit('test_connection', { userId: user.id, timestamp: new Date().toISOString() });
+      }
+      
+      // Request online users list after connection
+      setTimeout(() => {
+        console.log('[Socket] Requesting online users list...');
+        newSocket.emit('get_online_users');
+        // Also emit user status as online
+        console.log('[Socket] Setting user status to online...');
+        newSocket.emit('user_online', user.id);
+      }, 1000);
+      
+      // Also request periodically to keep status in sync
+      const statusInterval = setInterval(() => {
+        if (newSocket.connected && user?.id) {
+          console.log('[Socket] Periodic online users refresh...');
+          newSocket.emit('get_online_users');
+          // Re-emit user online status to ensure backend knows we're still connected
+          newSocket.emit('user_online', user.id);
+        }
+      }, 30000); // Every 30 seconds
     });
 
     newSocket.on('reconnect', (attemptNumber: number) => {
@@ -121,11 +152,10 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         type: error?.type || 'Unknown type',
         code: error?.code || 'No error code',
         transport: error?.transport || 'Unknown transport',
-        url: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
-        withCredentials: true,
-        timestamp: new Date().toISOString(),
+        apiUrl: apiUrl,
         errorString: error?.toString() || 'No string representation',
         errorKeys: Object.keys(error || {}),
+        timestamp: new Date().toISOString(),
         fullError: error
       });
       
@@ -138,28 +168,41 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       }, 2000);
     });
 
-    newSocket.on('new_message', (message: Message) => {
-      try {
-        if (!message || typeof message !== 'object') {
-          console.warn('[Socket] Invalid new_message data:', message);
-          return;
-        }
-        
-        console.log('[Socket] New message received:', message);
-        
-        // Add to messages if it's for the active conversation
-        if (activeConversation && message.conversationId === activeConversation.id) {
-          setMessages(prev => [message, ...prev]);
-        } else {
-          // Show notification for messages not in active conversation
-          showNotification(message);
-        }
-        
-        // Update conversations list
-        refreshConversations();
-      } catch (error) {
-        console.error('[Socket] Error in new_message handler:', error, 'Message:', message);
+    // Add comprehensive event logging
+    newSocket.onAny((eventName, ...args) => {
+      console.log(`[Socket] Event received: ${eventName}`, args);
+      if (eventName === 'new_message') {
+        console.log('[Socket] *** NEW_MESSAGE EVENT DETECTED ***', args[0]);
       }
+    });
+
+    // Test response handler
+    newSocket.on('test_response', (data) => {
+      console.log('[Socket] Test response received from backend:', data);
+    });
+
+    // Debug: Log all socket events to see what's being received
+    newSocket.onAny((eventName, ...args) => {
+      if (eventName !== 'online_users') { // Skip noisy events
+        console.log(`[Socket] DEBUG - Event received: ${eventName}`, args);
+      }
+    });
+
+    newSocket.on('new_message', (message: any) => {
+      console.log('[Socket] New message received:', message);
+      setMessages(prev => {
+        // Avoid duplicates by checking if message already exists
+        const exists = prev.some(m => m.id === message.id);
+        if (exists) {
+          console.log('[Socket] Message already exists, skipping duplicate');
+          return prev;
+        }
+        return [...prev, message];
+      });
+    });
+
+    newSocket.on('message_sent', (data: any) => {
+      console.log('[Socket] Message sent confirmation:', data);
     });
 
     newSocket.on('user_typing', (data) => {
@@ -192,41 +235,25 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    newSocket.on('user_status_change', (data) => {
-      try {
-        if (!data || typeof data !== 'object') {
-          console.warn('[Socket] Invalid user_status_change data:', data);
-          return;
-        }
-        
-        const { userId, isOnline } = data;
-        
-        if (userId === undefined || isOnline === undefined) {
-          console.warn('[Socket] Missing userId or isOnline in user_status_change:', data);
-          return;
-        }
-        
-        setOnlineUsers(prev => {
-          const updated = new Set(prev);
-          if (isOnline) {
-            updated.add(userId);
-          } else {
-            updated.delete(userId);
-          }
-          return updated;
-        });
-      } catch (error) {
-        console.error('[Socket] Error in user_status_change handler:', error, 'Data:', data);
-      }
-    });
-
     newSocket.on('online_users', (userIds) => {
       try {
         if (!Array.isArray(userIds)) {
           console.warn('[Socket] Invalid online_users data, expected array:', userIds);
           return;
         }
-        setOnlineUsers(new Set(userIds));
+        console.log('[Socket] Received online users list:', userIds);
+        console.log('[Socket] Current user ID:', user?.id);
+        console.log('[Socket] Setting online users set with:', userIds);
+        
+        // Ensure current user is included in online list if connected
+        const onlineSet = new Set(userIds.map(id => Number(id)));
+        if (user?.id && newSocket.connected) {
+          onlineSet.add(Number(user.id));
+          console.log('[Socket] Added current user to online set:', user.id);
+        }
+        
+        setOnlineUsers(onlineSet);
+        console.log('[Socket] Final online users set:', Array.from(onlineSet));
       } catch (error) {
         console.error('[Socket] Error in online_users handler:', error, 'Data:', userIds);
       }
@@ -278,14 +305,27 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/messaging/conversations?userId=${encodeURIComponent(user.id)}`, {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('[Socket] No token found, skipping conversation load');
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/messaging/conversations`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         credentials: 'include',
       });
+      
       if (response.ok) {
         const data = await response.json();
         if (Array.isArray(data)) {
           setConversations(data);
         }
+      } else {
+        console.error('[Socket] Failed to load conversations:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('[Socket] Error loading conversations:', error);
@@ -321,15 +361,32 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     loadMessages();
 
     // Join conversation room
-    if (socket) {
-      console.log('[Socket] Joining conversation:', activeConversation.id);
+    if (socket && socket.connected) {
+      console.log('[Socket] Joining conversation:', {
+        conversationId: activeConversation.id,
+        userId: user?.id,
+        socketConnected: socket.connected
+      });
       socket.emit('join_conversation', activeConversation.id);
+    } else if (socket && !socket.connected) {
+      console.log('[Socket] Waiting for connection before joining conversation...');
+      const joinWhenConnected = () => {
+        console.log('[Socket] Connection restored, joining conversation:', activeConversation.id);
+        socket.emit('join_conversation', activeConversation.id);
+        socket.off('connect', joinWhenConnected);
+      };
+      socket.on('connect', joinWhenConnected);
     }
   }, [activeConversation, socket]);
 
   const sendMessage = (conversationId: number, content: string) => {
-    if (!socket || !user) return;
+    if (!socket || !user) {
+      console.error('[Socket] Cannot send message - socket or user missing:', { socket: !!socket, user: !!user });
+      return;
+    }
 
+    console.log('[Socket] Sending message:', { conversationId, senderId: user.id, content, socketConnected: socket.connected });
+    
     socket.emit('send_message', {
       conversationId,
       senderId: user.id,
@@ -357,20 +414,107 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   };
 
   const createConversation = async (userId1: number, userId2: number, serviceRequestId?: number, consultationId?: number): Promise<Conversation> => {
+    console.log('[Socket] Creating conversation between users:', userId1, userId2);
+    
+    const token = localStorage.getItem('token');
+    console.log('[Socket] Token check:', {
+      hasToken: !!token,
+      tokenLength: token?.length,
+      tokenStart: token?.substring(0, 20) + '...',
+      user: user ? { id: user.id, email: user.email } : 'No user',
+      apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+    });
+    
+    if (!token) {
+      throw new Error('No authentication token found. Please log in.');
+    }
+    
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/messaging/conversations`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       credentials: 'include',
-      body: JSON.stringify({ userId1, userId2, serviceRequestId, consultationId }),
+      body: JSON.stringify({ 
+        participantIds: [userId2], // Only include the target user, current user is added automatically
+        isGroup: false,
+        serviceRequestId, 
+        consultationId 
+      }),
     });
 
-    const conversation = await response.json();
+    console.log('[Socket] Response received:', {
+      ok: response.ok,
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries())
+    });
+
+    if (!response.ok) {
+      console.error('[Socket] Response not OK - Full details:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        type: response.type,
+        redirected: response.redirected
+      });
+      
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        console.log('[Socket] Token expired, redirecting to login...');
+        window.location.href = '/auth/login?message=Session expired. Please log in again.';
+        throw new Error('Session expired. Please log in again.');
+      }
+      
+      let errorData;
+      const responseText = await response.text();
+      console.log('[Socket] Raw response text:', responseText);
+      
+      try {
+        errorData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('[Socket] Failed to parse error response:', parseError);
+        errorData = { 
+          message: `HTTP ${response.status}: ${response.statusText}`,
+          rawResponse: responseText
+        };
+      }
+      
+      console.error('[Socket] Failed to create conversation:', errorData);
+      throw new Error(errorData.message || `Failed to create conversation (${response.status})`);
+    }
+
+    const data = await response.json();
+    console.log('[Socket] Conversation created successfully:', data);
+    
+    if (!data.success || !data.conversation) {
+      throw new Error('Invalid response format from conversation creation');
+    }
+    
+    // Immediately set as active conversation and add to conversations list
+    const conversation = data.conversation;
+    console.log('[Socket] Setting active conversation immediately:', conversation);
+    setActiveConversation(conversation);
+    setConversations(prev => {
+      // Check if conversation already exists
+      const exists = prev.some(conv => conv.id === conversation.id);
+      if (!exists) {
+        console.log('[Socket] Adding new conversation to list:', conversation.id);
+        return [conversation, ...prev];
+      }
+      console.log('[Socket] Conversation already exists in list');
+      return prev;
+    });
+    
     refreshConversations();
     return conversation;
   };
 
   const isUserOnline = (userId: number): boolean => {
-    return onlineUsers.has(userId);
+    const isOnline = onlineUsers.has(Number(userId));
+    console.log(`[Socket] Checking if user ${userId} is online:`, isOnline, 'Online users:', Array.from(onlineUsers));
+    return isOnline;
   };
 
   const showNotification = (message: Message) => {

@@ -20,12 +20,22 @@ interface ListingFormState {
   // Add other fields from your schema that you want to edit
 }
 
-interface ListingData extends ListingFormState {
+interface ListingData {
   id: number;
-  user_id: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  userId: number;
+  businessName: string;
+  businessCategory: string;
+  description: string;
+  countryOfOrigin: string;
+  targetMarkets: string[];
+  contactEmail: string;
+  contactPhone: string;
+  websiteUrl: string;
+  logoImageUrl: string;
+  galleryImageUrls: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const EditListingPage = () => {
@@ -46,7 +56,7 @@ const EditListingPage = () => {
         setLoading(true);
         setError(null);
         try {
-          const response = await fetch(`/api/listings/${id}`, {
+          const response = await fetch(`http://127.0.0.1:3001/api/listings/${id}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
             },
@@ -57,16 +67,16 @@ const EditListingPage = () => {
           }
           const data: ListingData = await response.json();
           setListing({
-            business_name: data.business_name || '',
-            business_category: data.business_category || '',
+            business_name: data.businessName || '',
+            business_category: data.businessCategory || '',
             description: data.description || '',
-            country_of_origin: data.country_of_origin || '',
-            target_markets: data.target_markets || [],
-            contact_email: data.contact_email || '',
-            contact_phone: data.contact_phone || '',
-            website_url: data.website_url || '',
-            logo_image_url: data.logo_image_url || '',
-            gallery_image_urls: data.gallery_image_urls || [],
+            country_of_origin: data.countryOfOrigin || '',
+            target_markets: data.targetMarkets || [],
+            contact_email: data.contactEmail || '',
+            contact_phone: data.contactPhone || '',
+            website_url: data.websiteUrl || '',
+            logo_image_url: data.logoImageUrl || '',
+            gallery_image_urls: data.galleryImageUrls || [],
           });
         } catch (err: any) {
           console.error('Fetch listing error:', err);
@@ -99,7 +109,7 @@ const EditListingPage = () => {
     setSubmitError(null);
 
     try {
-      const response = await fetch(`/api/listings/${id}`, {
+      const response = await fetch(`http://127.0.0.1:3001/api/listings/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

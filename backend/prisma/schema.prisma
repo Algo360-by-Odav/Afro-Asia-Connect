@@ -19,6 +19,7 @@ model User {
   lastName    String?  @map("last_name")
   phone       String?  @map("phone")
   smsPreferences Json? @map("sms_preferences")
+  industryInterest String? @map("industry_interest")
   isActive    Boolean  @default(true) @map("is_active")
   isAdmin     Boolean  @default(false) @map("is_admin")
   createdAt   DateTime  @default(now())
@@ -91,6 +92,7 @@ model Company {
   whatsapp    String?
   linkedin    String?
   averageRating Float? @default(0)
+  spotlights  Spotlight[]
 }
 
 enum Role {
@@ -496,6 +498,34 @@ model MessageAnalytics {
   
   @@unique([userId, conversationId, date])
   @@map("message_analytics")
+}
+
+// Categories for data-driven industry/topic filters
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  slug      String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("categories")
+}
+
+// Daily spotlighted companies for News page carousel
+model Spotlight {
+  id         Int      @id @default(autoincrement())
+  company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId  Int
+  date       DateTime @db.Date // Spotlight date (day granularity)
+  position   Int      // 1..3 order in carousel
+  blurb      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([date, position])
+  @@index([date])
+  @@index([companyId])
+  @@map("spotlights")
 }
 
 model DocumentShare {

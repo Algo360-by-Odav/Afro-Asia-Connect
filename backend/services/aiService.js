@@ -44,7 +44,7 @@ class AIService {
     try {
       // Get conversation history for context
       const recentMessages = await prisma.message.findMany({
-        where: { conversationId },
+        where: { conversationId: parseInt(conversationId) },
         orderBy: { createdAt: 'desc' },
         take: 5,
         include: {

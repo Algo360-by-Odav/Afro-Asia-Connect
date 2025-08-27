@@ -22,6 +22,7 @@ interface User {
   lastName?: string;
   isAdmin?: boolean; // Backend uses isAdmin field
   user_type?: string; // Added user_type
+  role?: string; // Added role field for compatibility
   // Add other user properties as needed
 }
 
@@ -60,25 +61,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isHydrated, setIsHydrated] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    // Set hydration flag first
+    setIsHydrated(true);
+    
     // Attempt to load token and user from localStorage or cookies
     const initializeAuth = async () => {
       setIsLoading(true);
-      let storedToken = localStorage.getItem('token');
+      let storedToken = null;
+      
+      // Only access localStorage on client side
+      if (typeof window !== 'undefined') {
+        storedToken = localStorage.getItem('token');
+      }
       
       // If no token in localStorage, check cookies as fallback
       if (!storedToken) {
         const cookieToken = getCookie('token');
         if (cookieToken) {
           storedToken = cookieToken;
-          // Sync token back to localStorage
-          localStorage.setItem('token', cookieToken);
+          // Sync token back to localStorage (only on client side)
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('token', cookieToken);
+          }
         }
       }
       
-      const storedUserStr = localStorage.getItem('user');
+      let storedUserStr = null;
+      if (typeof window !== 'undefined') {
+        storedUserStr = localStorage.getItem('user');
+      }
       if (storedUserStr) {
         try {
           const parsedUser: User = JSON.parse(storedUserStr);
@@ -86,9 +101,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (!parsedUser.user_type) {
           // attempt to derive from stored token
           const decoded = storedToken ? decodeJwtPayload(storedToken) : {};
-          parsedUser.user_type = (decoded as any)?.user_type?.toLowerCase?.() || (decoded as any)?.role?.toLowerCase?.() || undefined;
+          parsedUser.user_type = (decoded as any)?.user_type || (decoded as any)?.role || undefined;
+          parsedUser.role = (decoded as any)?.role || (decoded as any)?.user_type || undefined;
         } else {
-          parsedUser.user_type = parsedUser.user_type.toLowerCase();
+          parsedUser.role = parsedUser.role || parsedUser.user_type;
         }
           setUser(parsedUser);
         } catch (e) {
@@ -110,7 +126,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // setUser({ id: '1', email: 'test@example.com', firstName: 'Test' }); 
         } catch (error) {
           console.error('Failed to fetch user on init:', error);
-          localStorage.removeItem('token'); // Clear invalid token
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('token'); // Clear invalid token
+          }
           setToken(null);
           setUser(null);
         }
@@ -137,12 +155,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       const normalizedUser: User = {
         ...userData,
-        user_type: roleValue?.toLowerCase() || undefined,
+        user_type: roleValue || undefined,
+        role: roleValue || undefined, // Preserve original role case
       };
       setUser(normalizedUser);
-      // Persist to localStorage for page refreshes
-      localStorage.setItem('user', JSON.stringify(normalizedUser));
-      localStorage.setItem('token', tokenValue);
+      // Persist to localStorage for page refreshes (only on client side)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(normalizedUser));
+        localStorage.setItem('token', tokenValue);
+      }
       
       // Also set token in cookies for middleware access
       document.cookie = `token=${tokenValue}; path=/; max-age=${5 * 60 * 60}; SameSite=Strict; Secure=${window.location.protocol === 'https:'}`;
@@ -163,8 +184,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     console.log('AuthContext: logout called');
     setUser(null);
     setToken(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
     
     // Clear token cookie
     document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
@@ -177,7 +200,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // This function would typically be called to refresh user data
     // or after certain operations like profile update.
     console.log('AuthContext: fetchUser called');
-    const currentToken = localStorage.getItem('token');
+    let currentToken = null;
+    if (typeof window !== 'undefined') {
+      currentToken = localStorage.getItem('token');
+    }
     if (!currentToken) {
       // setUser(null); // Ensure user is cleared if no token
       // setToken(null);

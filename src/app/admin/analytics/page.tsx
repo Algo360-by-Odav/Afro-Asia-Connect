@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
 import { Button } from '../../../components/ui/button';
@@ -37,6 +38,7 @@ interface PlatformAnalytics {
 }
 
 export default function AdminAnalyticsPage() {
+  const router = useRouter();
   const [analyticsData, setAnalyticsData] = useState<PlatformAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('30');
@@ -137,6 +139,16 @@ export default function AdminAnalyticsPage() {
           <p className="text-gray-600 mt-1">Comprehensive insights into platform performance</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              console.log('NewsPage button clicked, navigating to /news');
+              router.push('/news');
+            }}
+          >
+            <Globe className="w-4 h-4 mr-2" />
+            NewsPage
+          </Button>
           <Select value={dateRange} onValueChange={setDateRange}>
             <SelectTrigger className="w-32">
               <SelectValue />

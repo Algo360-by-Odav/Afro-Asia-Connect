@@ -35,11 +35,12 @@ const formatDate = (dateString: string) => {
 };
 
 export default function ManageEventsPage() {
-  console.log('[ManageEventsPage] Component rendering/re-rendering');
+  console.log('[ManageEventsPage] Component rendering/re-rendering - v2');
   const { user, isLoading: authIsLoading, token } = useAuth();
   console.log('[ManageEventsPage] AuthContext state:', { user, authIsLoading, tokenExists: !!token });
   const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
+  console.log('[ManageEventsPage] Current events state:', events, 'Is array:', Array.isArray(events));
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,9 +68,16 @@ export default function ManageEventsPage() {
           throw new Error(errorData.msg || `Failed to fetch events: ${response.status}`);
         }
       }
-      const data: Event[] = await response.json();
-      console.log('[ManageEventsPage] fetchEvents success. Data:', data);
-      setEvents(data);
+      const result = await response.json();
+      console.log('[ManageEventsPage] fetchEvents success. Result:', result);
+      const data: Event[] = result.data || result;
+      console.log('[ManageEventsPage] Parsed data:', data, 'Is array:', Array.isArray(data));
+      if (Array.isArray(data)) {
+        setEvents(data);
+      } else {
+        console.error('[ManageEventsPage] Data is not an array:', data);
+        setEvents([]);
+      }
     } catch (err: any) {
       console.error('[ManageEventsPage] fetchEvents network/fetch error:', err);
       setError(err.message || 'An unexpected error occurred while fetching events.');
@@ -152,7 +160,7 @@ export default function ManageEventsPage() {
         </Link>
       </div>
 
-      {events.length === 0 ? (
+      {!Array.isArray(events) || events.length === 0 ? (
         <p className="text-center text-gray-500 text-xl">No events found. Start by creating one!</p>
       ) : (
         <div className="bg-white shadow-md rounded-lg overflow-x-auto">
@@ -168,7 +176,7 @@ export default function ManageEventsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {events.map((event) => (
+              {(events && Array.isArray(events)) ? events.map((event) => (
                 <tr key={event.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{event.title}</div>
@@ -194,7 +202,13 @@ export default function ManageEventsPage() {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                    No events found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

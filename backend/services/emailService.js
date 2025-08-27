@@ -2,27 +2,37 @@ const nodemailer = require('nodemailer');
 
 class EmailService {
   constructor() {
-    // Configure email transporter (using Gmail as example)
-    this.transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER || 'your-email@gmail.com',
-        pass: process.env.EMAIL_PASSWORD || 'your-app-password'
-      }
-    });
+    // Only configure email transporter if credentials are provided
+    if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+      this.transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASSWORD
+        }
+      });
 
-    // Verify transporter configuration
-    this.transporter.verify((error, success) => {
-      if (error) {
-        console.error('❌ Email service configuration error:', error);
-      } else {
-        console.log('✅ Email service ready to send messages');
-      }
-    });
+      // Verify transporter configuration
+      this.transporter.verify((error, success) => {
+        if (error) {
+          console.error('❌ Email service configuration error:', error);
+        } else {
+          console.log('✅ Email service ready to send messages');
+        }
+      });
+    } else {
+      console.log('⚠️ Email service disabled - no credentials provided');
+      this.transporter = null;
+    }
   }
 
   // Send booking confirmation email to customer
   async sendBookingConfirmation(booking) {
+    if (!this.transporter) {
+      console.log('⚠️ Email service disabled - skipping booking confirmation email');
+      return { success: false, reason: 'Email service not configured' };
+    }
+
     try {
       const emailContent = this.generateBookingConfirmationEmail(booking);
       
@@ -44,12 +54,17 @@ class EmailService {
       return { success: true, messageId: result.messageId };
     } catch (error) {
       console.error('❌ Error sending booking confirmation:', error);
-      throw new Error('Failed to send booking confirmation email');
+      return { success: false, error: error.message };
     }
   }
 
   // Send booking notification to service provider
   async sendProviderNotification(booking) {
+    if (!this.transporter) {
+      console.log('⚠️ Email service disabled - skipping provider notification email');
+      return { success: false, reason: 'Email service not configured' };
+    }
+
     try {
       const emailContent = this.generateProviderNotificationEmail(booking);
       
@@ -71,12 +86,17 @@ class EmailService {
       return { success: true, messageId: result.messageId };
     } catch (error) {
       console.error('❌ Error sending provider notification:', error);
-      throw new Error('Failed to send provider notification email');
+      return { success: false, error: error.message };
     }
   }
 
   // Send booking reminder email
   async sendBookingReminder(booking, reminderType = '24h') {
+    if (!this.transporter) {
+      console.log('⚠️ Email service disabled - skipping booking reminder email');
+      return { success: false, reason: 'Email service not configured' };
+    }
+
     try {
       const emailContent = this.generateBookingReminderEmail(booking, reminderType);
       
@@ -99,12 +119,17 @@ class EmailService {
       return { success: true, messageId: result.messageId };
     } catch (error) {
       console.error('❌ Error sending booking reminder:', error);
-      throw new Error('Failed to send booking reminder email');
+      return { success: false, error: error.message };
     }
   }
 
   // Send booking status update email
   async sendBookingStatusUpdate(booking, oldStatus) {
+    if (!this.transporter) {
+      console.log('⚠️ Email service disabled - skipping booking status update email');
+      return { success: false, reason: 'Email service not configured' };
+    }
+
     try {
       const emailContent = this.generateStatusUpdateEmail(booking, oldStatus);
       
@@ -126,8 +151,8 @@ class EmailService {
 
       return { success: true, messageId: result.messageId };
     } catch (error) {
-      console.error('❌ Error sending status update:', error);
-      throw new Error('Failed to send status update email');
+      console.error('❌ Error sending booking status update:', error);
+      return { success: false, error: error.message };
     }
   }
 

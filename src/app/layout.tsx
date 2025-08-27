@@ -7,6 +7,7 @@ import { SocketProvider } from '@/context/SocketContext';
 import FloatingChatButton from './components/messaging/FloatingChatButton';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import ClientWrapper from '../components/ClientWrapper';
 
 const inter = Inter({
   variable: "--font-inter",
@@ -30,27 +31,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}>
-        <AuthProvider>
-          <SocketProvider>
-            <Navbar />
-            <main>{children}</main>
-            <FloatingChatButton />
-          </SocketProvider>
-          <ToastContainer
-            position="top-right"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="light"
-          />
-        </AuthProvider>
+        <ClientWrapper>
+          <AuthProvider>
+            <SocketProvider>
+              <Navbar />
+              <main>{children}</main>
+              <FloatingChatButton />
+            </SocketProvider>
+            <ToastContainer
+              position="top-right"
+              autoClose={5000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="light"
+            />
+          </AuthProvider>
+        </ClientWrapper>
       </body>
     </html>
   );

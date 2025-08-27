@@ -72,6 +72,7 @@ router.post('/register', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
+        role: user.role, // Include actual role from database
         user_type: mapRoleToUserType(user.role),
         is_admin: user.isAdmin
       }
@@ -127,6 +128,7 @@ router.post('/login', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
+        role: user.role, // Include actual role from database
         user_type: mapRoleToUserType(user.role),
         is_admin: user.isAdmin // Added is_admin to JWT payload
       }
@@ -388,7 +390,7 @@ router.get('/google/callback', async (req, res) => {
     }
 
     // Sign JWT
-    const payload = { user: { id: user.id, email: user.email, user_type: mapRoleToUserType(user.role) } };
+    const payload = { user: { id: user.id, email: user.email, role: user.role, user_type: mapRoleToUserType(user.role) } };
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '5h' });
 
     // Set cookie for session auth

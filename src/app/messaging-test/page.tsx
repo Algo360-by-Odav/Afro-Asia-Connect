@@ -145,7 +145,10 @@ export default function MessagingTestPage() {
                           <p className="text-sm text-gray-600 mb-1">{targetUser.email}</p>
                           <div className="flex items-center space-x-2">
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-[var(--primary-blue)]">
-                              {targetUser.role === 'BUYER' ? '🛒 Buyer' : targetUser.role === 'SERVICE_PROVIDER' ? '🔧 Service Provider' : '🏢 Admin'}
+                              {targetUser.role === 'BUYER' ? '🛒 Buyer' : 
+                               targetUser.role === 'SUPPLIER' ? '🏪 Seller' :
+                               targetUser.role === 'SERVICE_PROVIDER' ? '🔧 Service Provider' : 
+                               targetUser.role === 'ADMIN' ? '🏢 Admin' : '❓ Unknown'}
                             </span>
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                               ● Online

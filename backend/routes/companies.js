@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../prismaClient');
 const auth = require('../middleware/authMiddleware');
+const { seedCompanies } = require('../scripts/seedCompanies');
 const router = express.Router();
 
 // GET /api/companies
@@ -94,6 +95,25 @@ router.delete('/:id', auth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(400).json({ error: 'Failed to delete company' });
+  }
+});
+
+// POST /api/companies/seed - Seed sample companies
+router.post('/seed', async (req, res) => {
+  try {
+    await seedCompanies();
+    const count = await prisma.company.count();
+    res.json({ 
+      success: true, 
+      message: 'Companies seeded successfully', 
+      totalCompanies: count 
+    });
+  } catch (error) {
+    console.error('Error seeding companies:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to seed companies' 
+    });
   }
 });
 

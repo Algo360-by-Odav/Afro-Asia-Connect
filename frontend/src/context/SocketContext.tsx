@@ -357,11 +357,20 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   };
 
   const createConversation = async (userId1: number, userId2: number, serviceRequestId?: number, consultationId?: number): Promise<Conversation> => {
+    const token = localStorage.getItem('token');
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/messaging/conversations`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       credentials: 'include',
-      body: JSON.stringify({ userId1, userId2, serviceRequestId, consultationId }),
+      body: JSON.stringify({ 
+        participantIds: [userId2], // Only include the target user, current user is added automatically
+        isGroup: false,
+        serviceRequestId, 
+        consultationId 
+      }),
     });
 
     const conversation = await response.json();

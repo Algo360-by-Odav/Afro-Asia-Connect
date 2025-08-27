@@ -47,12 +47,15 @@ export default function CreateListingPage() {
     );
   }
 
-  if (user.user_type !== 'seller') {
+  // Check both user_type and role fields for compatibility - prioritize role field
+  const userRole = user.role || user.user_type;
+  const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER';
+  if (!isSellerRole) {
     // User is logged in, but not a seller.
     return (
       <div className="flex flex-col justify-center items-center min-h-screen bg-gray-100 p-4 text-center">
         <h1 className="text-2xl font-semibold text-red-600 mb-4">Access Denied</h1>
-        <p className="text-gray-700 mb-6">Only sellers can create listings. Your account type is: {user.user_type}.</p>
+        <p className="text-gray-700 mb-6">Only sellers can create listings. Your account type is: {userRole}.</p>
         <button 
           onClick={() => router.push('/dashboard')}
           className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition duration-150 mr-2"

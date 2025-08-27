@@ -61,7 +61,7 @@ export default function DashboardPage() {
       const fetchDashboardMetrics = async () => {
         try {
           setMetricsLoading(true);
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/metrics`, { 
+          const response = await fetch(`http://127.0.0.1:3001/api/dashboard/metrics`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
           });
           if (!response.ok) throw new Error('Failed to fetch dashboard metrics');
@@ -89,7 +89,7 @@ export default function DashboardPage() {
     const fetchNotifications = async () => {
       setNotificationsLoading(true);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/dashboard/notifications`, { 
+        const response = await fetch(`http://127.0.0.1:3001/api/dashboard/notifications`, { 
           headers: { 'Authorization': `Bearer ${token}` } 
         });
         if (!response.ok) throw new Error('Failed to fetch notifications');
@@ -110,12 +110,25 @@ export default function DashboardPage() {
     fetchNotifications();
 
     const fetchRecentActivities = async () => {
+      if (!token) {
+        console.log('No token available for recent activities');
+        return;
+      }
+      
       setActivitiesLoading(true);
       try {
-        const response = await fetch(`http://localhost:3001/api/dashboard/recent-activity`, { 
+        console.log('Fetching recent activities with token:', token ? 'Present' : 'Missing');
+        const response = await fetch(`http://127.0.0.1:3001/api/dashboard/recent-activity`, { 
           headers: { 'Authorization': `Bearer ${token}` } 
         });
-        if (!response.ok) throw new Error('Failed to fetch recent activities');
+        
+        console.log('Recent activities response status:', response.status);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Recent activities error response:', errorText);
+          throw new Error(`Failed to fetch recent activities: ${response.status} ${errorText}`);
+        }
+        
         const result = await response.json();
         setRecentActivities(result.data.map((a: any) => ({
           id: a.id,

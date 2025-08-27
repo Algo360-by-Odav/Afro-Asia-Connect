@@ -64,7 +64,7 @@ router.get('/conversations', authenticateToken, async (req, res) => {
         messages: {
           some: {
             senderId: { not: userId },
-            readBy: { none: { userId: userId } }
+            isRead: false
           }
         }
       })
@@ -75,17 +75,11 @@ router.get('/conversations', authenticateToken, async (req, res) => {
         where: whereClause,
         include: {
           participants: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  profilePicture: true,
-                  isOnline: true,
-                  lastSeen: true
-                }
-              }
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
             }
           },
           messages: {
@@ -95,7 +89,6 @@ router.get('/conversations', authenticateToken, async (req, res) => {
               sender: {
                 select: { id: true, firstName: true, lastName: true }
               },
-              readBy: true
             }
           },
           _count: {
@@ -103,7 +96,7 @@ router.get('/conversations', authenticateToken, async (req, res) => {
               messages: {
                 where: {
                   senderId: { not: userId },
-                  readBy: { none: { userId: userId } }
+                  isRead: false
                 }
               }
             }
@@ -117,21 +110,21 @@ router.get('/conversations', authenticateToken, async (req, res) => {
     ]);
 
     const formattedConversations = conversations.map(conv => {
-      const otherParticipants = conv.participants.filter(p => p.userId !== userId);
+      const otherParticipants = conv.participants.filter(p => p.id !== userId);
       const lastMessage = conv.messages[0];
       
       return {
         id: conv.id,
         title: conv.title,
         type: conv.type,
-        participants: otherParticipants.map(p => p.user),
+        participants: otherParticipants,
         lastMessage: lastMessage ? {
           id: lastMessage.id,
           content: lastMessage.content,
           type: lastMessage.type,
           sender: lastMessage.sender,
           createdAt: lastMessage.createdAt,
-          isRead: lastMessage.readBy.some(r => r.userId === userId)
+          isRead: lastMessage.isRead
         } : null,
         unreadCount: conv._count.messages,
         updatedAt: conv.updatedAt,
@@ -161,10 +154,17 @@ router.get('/conversations', authenticateToken, async (req, res) => {
 // Create or get conversation
 router.post('/conversations', authenticateToken, async (req, res) => {
   try {
+    console.log('[Messaging API] Create conversation request:', {
+      userId: req.user?.id,
+      body: req.body,
+      headers: req.headers.authorization ? 'Bearer token present' : 'No auth header'
+    });
+
     const userId = req.user.id;
-    const { participantIds, title, type = 'direct' } = req.body;
+    const { participantIds, title, isGroup = false } = req.body;
 
     if (!participantIds || !Array.isArray(participantIds) || participantIds.length === 0) {
+      console.log('[Messaging API] Missing participantIds:', { participantIds, type: typeof participantIds });
       return res.status(400).json({
         success: false,
         message: 'participantIds array is required'
@@ -175,27 +175,34 @@ router.post('/conversations', authenticateToken, async (req, res) => {
     const allParticipants = [...new Set([userId, ...participantIds])];
 
     // For direct conversations, check if one already exists
-    if (type === 'direct' && allParticipants.length === 2) {
+    if (!isGroup && allParticipants.length === 2) {
       const existingConversation = await prisma.conversation.findFirst({
         where: {
-          type: 'direct',
-          participants: {
-            every: {
-              userId: { in: allParticipants }
+          isGroup: false,
+          AND: [
+            {
+              participants: {
+                some: {
+                  id: allParticipants[0]
+                }
+              }
+            },
+            {
+              participants: {
+                some: {
+                  id: allParticipants[1]
+                }
+              }
             }
-          }
+          ]
         },
         include: {
           participants: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  profilePicture: true
-                }
-              }
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true
             }
           }
         }
@@ -212,26 +219,21 @@ router.post('/conversations', authenticateToken, async (req, res) => {
     // Create new conversation
     const conversation = await prisma.conversation.create({
       data: {
-        title: title || (type === 'direct' ? null : 'Group Chat'),
-        type,
+        title: title || (isGroup ? 'Group Chat' : null),
+        isGroup: isGroup,
         participants: {
-          create: allParticipants.map(participantId => ({
-            userId: participantId,
-            role: participantId === userId ? 'admin' : 'member'
+          connect: allParticipants.map(participantId => ({
+            id: participantId
           }))
         }
       },
       include: {
         participants: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                profilePicture: true
-              }
-            }
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
           }
         }
       }
@@ -242,10 +244,16 @@ router.post('/conversations', authenticateToken, async (req, res) => {
       conversation
     });
   } catch (error) {
-    console.error('Error creating conversation:', error);
+    console.error('[Messaging API] Error creating conversation:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id,
+      body: req.body
+    });
     res.status(500).json({
       success: false,
-      message: 'Failed to create conversation'
+      message: 'Failed to create conversation',
+      error: error.message
     });
   }
 });
@@ -263,7 +271,7 @@ router.get('/conversations/:id/messages', authenticateToken, async (req, res) =>
       where: {
         id: parseInt(id),
         participants: {
-          some: { userId: userId }
+          some: { id: userId }
         }
       }
     });
@@ -292,28 +300,7 @@ router.get('/conversations/:id/messages', authenticateToken, async (req, res) =>
               id: true,
               firstName: true,
               lastName: true,
-              profilePicture: true
-            }
-          },
-          readBy: {
-            include: {
-              user: {
-                select: { id: true, firstName: true, lastName: true }
-              }
-            }
-          },
-          reactions: {
-            include: {
-              user: {
-                select: { id: true, firstName: true, lastName: true }
-              }
-            }
-          },
-          replyTo: {
-            include: {
-              sender: {
-                select: { id: true, firstName: true, lastName: true }
-              }
+              email: true
             }
           }
         },
@@ -326,17 +313,17 @@ router.get('/conversations/:id/messages', authenticateToken, async (req, res) =>
 
     // Mark messages as read
     const unreadMessages = messages.filter(msg => 
-      msg.senderId !== userId && !msg.readBy.some(r => r.userId === userId)
+      msg.senderId !== userId && !msg.isRead
     );
 
     if (unreadMessages.length > 0) {
-      await prisma.messageRead.createMany({
-        data: unreadMessages.map(msg => ({
-          messageId: msg.id,
-          userId: userId,
-          readAt: new Date()
-        })),
-        skipDuplicates: true
+      await prisma.message.updateMany({
+        where: {
+          id: { in: unreadMessages.map(msg => msg.id) }
+        },
+        data: {
+          isRead: true
+        }
       });
     }
 
@@ -378,7 +365,7 @@ router.post('/conversations/:id/messages', authenticateToken, async (req, res) =
       where: {
         id: parseInt(id),
         participants: {
-          some: { userId: userId }
+          some: { id: userId }
         }
       }
     });
@@ -406,7 +393,7 @@ router.post('/conversations/:id/messages', authenticateToken, async (req, res) =
             id: true,
             firstName: true,
             lastName: true,
-            profilePicture: true
+            email: true
           }
         },
         replyTo: {
@@ -490,7 +477,7 @@ router.get('/search', authenticateToken, async (req, res) => {
       content: { contains: q.trim(), mode: 'insensitive' },
       conversation: {
         participants: {
-          some: { userId: userId }
+          some: { id: userId }
         }
       },
       ...(conversationId && { conversationId: parseInt(conversationId) })
@@ -505,14 +492,14 @@ router.get('/search', authenticateToken, async (req, res) => {
               id: true,
               firstName: true,
               lastName: true,
-              profilePicture: true
+              email: true
             }
           },
           conversation: {
             select: {
               id: true,
               title: true,
-              type: true
+              isGroup: true
             }
           }
         },
@@ -611,32 +598,21 @@ router.put('/conversations/:conversationId/read', authenticateToken, async (req,
     const userId = req.user.id;
     const { conversationId } = req.params;
     
-    // Get unread messages in the conversation
-    const unreadMessages = await prisma.message.findMany({
+    // Mark unread messages as read in the conversation
+    await prisma.message.updateMany({
       where: {
         conversationId: parseInt(conversationId),
         senderId: { not: userId },
-        readBy: {
-          none: { userId: userId }
-        }
+        isRead: false
       },
-      select: { id: true }
+      data: {
+        isRead: true
+      }
     });
-
-    if (unreadMessages.length > 0) {
-      await prisma.messageRead.createMany({
-        data: unreadMessages.map(msg => ({
-          messageId: msg.id,
-          userId: userId,
-          readAt: new Date()
-        })),
-        skipDuplicates: true
-      });
-    }
 
     res.json({ 
       success: true,
-      markedAsRead: unreadMessages.length
+      message: 'Messages marked as read'
     });
   } catch (error) {
     console.error('Error marking messages as read:', error);
@@ -699,7 +675,7 @@ router.get('/conversations/:id/participants', authenticateToken, async (req, res
       where: {
         id: parseInt(id),
         participants: {
-          some: { userId: userId }
+          some: { id: userId }
         }
       },
       include: {
@@ -710,9 +686,7 @@ router.get('/conversations/:id/participants', authenticateToken, async (req, res
                 id: true,
                 firstName: true,
                 lastName: true,
-                profilePicture: true,
-                isOnline: true,
-                lastSeen: true
+                email: true
               }
             }
           }

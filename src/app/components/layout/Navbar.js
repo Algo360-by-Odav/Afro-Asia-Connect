@@ -63,6 +63,11 @@ export default function Navbar() {
                    className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors duration-200 ${pathname === '/pricing' ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-200 hover:bg-white/10 hover:text-white'}`}>
                     Pricing
                 </Link>
+                {/* Standard Next.js Link for News */}
+                <Link href="/news"
+                   className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors duration-200 ${pathname === '/news' ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-200 hover:bg-white/10 hover:text-white'}`}>
+                    News
+                </Link>
 
 
               </div>
@@ -168,6 +173,11 @@ export default function Navbar() {
           <Link href="/pricing"
              className={`block px-3 py-2 rounded-md text-base font-medium ${pathname === '/pricing' ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-300 hover:bg-white/10 hover:text-white'}`}>
               Pricing
+          </Link>
+          {/* Standard Next.js Link for News - Mobile */}
+          <Link href="/news"
+             className={`block px-3 py-2 rounded-md text-base font-medium ${pathname === '/news' ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-300 hover:bg-white/10 hover:text-white'}`}>
+              News
           </Link>
         </div>
         <div className="pt-4 pb-3 border-t border-gray-700">

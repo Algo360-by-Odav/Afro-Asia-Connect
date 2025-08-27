@@ -76,7 +76,7 @@ export default function SingleListingPage() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/listings/${id}`);
+        const response = await fetch(`http://127.0.0.1:3001/api/listings/${id}`);
         if (!response.ok) {
           const errorData = await response.json();
           if (response.status === 404) {

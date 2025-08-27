@@ -4,6 +4,8 @@
   "main": "index.js",
   "scripts": {
     "seed": "node prisma/seed.js",
+    "seed:companies": "node scripts/seedCompanies.js",
+    "seed:listings": "node scripts/seedBusinessListings.js",
     "test": "jest",
     "start": "node server.js"
   },

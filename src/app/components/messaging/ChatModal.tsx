@@ -24,6 +24,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
     stopTyping,
     typingUsers,
     isUserOnline,
+    onlineUsers,
     setActiveConversation,
     markAsRead 
   } = useSocket();
@@ -47,7 +48,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
 
   // Mark messages as read when conversation becomes active
   useEffect(() => {
-    if (activeConversation && user) {
+    if (activeConversation && activeConversation.id && user) {
       markAsRead(activeConversation.id);
     }
   }, [activeConversation, user]);
@@ -57,7 +58,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
     
     if (selectedFile) {
       await handleFileUpload();
-    } else {
+    } else if (activeConversation && activeConversation.id) {
       sendMessage(activeConversation.id, newMessage);
       setNewMessage('');
     }
@@ -69,7 +70,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
     setIsUploading(true);
     const formData = new FormData();
     formData.append('file', selectedFile);
-    formData.append('conversationId', activeConversation.id.toString());
+    formData.append('conversationId', activeConversation?.id?.toString() || '');
     formData.append('senderId', user?.id?.toString() || '');
     
     try {
@@ -116,8 +117,10 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
     if (typingTimeout) {
       clearTimeout(typingTimeout);
     }
-    startTyping(activeConversation.id);
-    setTypingTimeout(setTimeout(() => stopTyping(activeConversation.id), 2000));
+    if (activeConversation && activeConversation.id) {
+      startTyping(activeConversation.id);
+      setTypingTimeout(setTimeout(() => stopTyping(activeConversation.id), 2000));
+    }
   };
 
   const handleEmojiSelect = (emoji: string) => {
@@ -145,7 +148,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
           <div className="flex items-center space-x-1 mr-2">
             <button
               onClick={() => setShowSearch(true)}
-              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+              className="p-1.5 text-gray-500 hover:text-blue-900 hover:bg-blue-900/10 rounded-md transition-colors"
               title="Search messages"
             >
               🔍
@@ -175,8 +178,8 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
               onClick={() => setAiEnabled(!aiEnabled)}
               className={`p-1.5 rounded-md transition-colors ${
                 aiEnabled 
-                  ? 'text-blue-600 bg-blue-50 hover:bg-blue-100' 
-                  : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'
+                  ? 'text-blue-900 bg-blue-900/10 hover:bg-blue-900/20' 
+                  : 'text-gray-500 hover:text-blue-900 hover:bg-blue-900/10'
               }`}
               title={aiEnabled ? 'Disable AI features' : 'Enable AI features'}
             >
@@ -193,24 +196,27 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
           </button>
         </div>
         
-        {/* Conversations Sidebar */}
-        <div className="w-1/3 border-r border-gray-200 flex flex-col">
+        {/* Left Sidebar - Conversations */}
+        <div className="w-1/3 border-r border-gray-200 flex flex-col bg-blue-900 text-white">
           {/* Header */}
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-800">💬 Messages</h2>
+          <div className="p-4 border-b border-blue-800">
+            <h3 className="text-lg font-semibold text-white">Messages</h3>
+            <p className="text-sm text-blue-200">
+              Start your conversation here
+            </p>
           </div>
           
           <div className="flex-1 overflow-y-auto">
             {conversations.length === 0 ? (
               <div className="text-center py-12 px-6">
                 <div className="text-6xl mb-4">💬</div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">Start Your First Conversation</h3>
-                <p className="text-gray-500 mb-6">Connect with other users and explore our powerful messaging features</p>
+                <h3 className="text-lg font-semibold text-white mb-2">Start Your First Conversation</h3>
+                <p className="text-blue-200 mb-6">Connect with other users and explore our powerful messaging features</p>
                 
                 <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mb-6">
-                  <div className="bg-blue-50 p-3 rounded-lg">
+                  <div className="bg-blue-900/10 p-3 rounded-lg">
                     <div className="text-2xl mb-1">🔍</div>
-                    <p className="text-xs text-blue-700 font-medium">Search Messages</p>
+                    <p className="text-xs text-blue-200 font-medium">Search Messages</p>
                   </div>
                   <div className="bg-green-50 p-3 rounded-lg">
                     <div className="text-2xl mb-1">📋</div>
@@ -226,7 +232,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                   </div>
                 </div>
                 
-                <p className="text-sm text-gray-400">Visit the messaging test page to start conversations with other users</p>
+                <p className="text-sm text-blue-200">Visit the messaging test page to start conversations with other users</p>
               </div>
             ) : (
               conversations.map((conversation) => {
@@ -236,15 +242,15 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                 return (
                   <div
                     key={conversation.id}
-                    className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-                      activeConversation?.id === conversation.id ? 'bg-blue-50' : ''
+                    className={`p-4 border-b border-blue-800 cursor-pointer hover:bg-blue-800 ${
+                      activeConversation?.id === conversation.id ? 'bg-blue-800' : ''
                     }`}
                     onClick={() => setActiveConversation(conversation)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
-                          <div className="font-medium text-sm">
+                          <div className="font-medium text-sm text-white">
                             {otherUser?.firstName || otherUser?.lastName || 'Unknown User'}
                           </div>
                           {otherUser && (
@@ -254,19 +260,19 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                           )}
                         </div>
                         {conversation.lastMessage && (
-                          <div className="text-xs text-gray-500 truncate">
+                          <div className="text-xs text-blue-200 truncate">
                             {conversation.lastMessage.content}
                           </div>
                         )}
                       </div>
                       <div className="flex flex-col items-end space-y-1">
                         {conversation.lastMessage && (
-                          <div className="text-xs text-gray-400">
+                          <div className="text-xs text-blue-200">
                             {formatTime(conversation.lastMessage.createdAt)}
                           </div>
                         )}
                         {unreadCount > 0 && (
-                          <div className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                          <div className="bg-white text-blue-900 text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
                             {unreadCount}
                           </div>
                         )}
@@ -279,11 +285,11 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
           </div>
           
           {/* AI Conversation Insights */}
-          {activeConversation && activeConversation.id && aiEnabled && (
+          {activeConversation?.id && aiEnabled && (
             <div className="p-4 border-t border-gray-200">
               <ConversationSentiment
-                conversationId={activeConversation.id.toString()}
-                userId={user?.id?.toString()}
+                conversationId={activeConversation?.id?.toString() || ''}
+                userId={user?.id?.toString() || ''}
               />
             </div>
           )}
@@ -308,8 +314,13 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                           ? 'bg-green-500' : 'bg-gray-400'
                       }`} />
                       <span>
-                        {getOtherParticipant(activeConversation) && isUserOnline(getOtherParticipant(activeConversation).id) 
-                          ? 'Online' : 'Offline'}
+                        {(() => {
+                          const otherParticipant = getOtherParticipant(activeConversation);
+                          const isOnline = otherParticipant && isUserOnline(otherParticipant.id);
+                          console.log('[ChatModal] Other participant:', otherParticipant?.id, 'Is online:', isOnline);
+                          console.log('[ChatModal] Online users:', Array.from(onlineUsers || new Set()));
+                          return isOnline ? 'Online' : 'Offline';
+                        })()}
                       </span>
                     </div>
                   </div>
@@ -329,7 +340,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                       <div
                         className={`max-w-xs lg:max-w-md px-3 py-2 rounded-lg ${
                           Number(message.senderId) === Number(user?.id)
-                            ? 'bg-blue-500 text-white'
+                            ? 'bg-blue-900 text-white'
                             : 'bg-gray-200 text-gray-800'
                         }`}
                       >
@@ -366,10 +377,10 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
               </div>
 
               {/* AI Smart Suggestions */}
-              {activeConversation && aiEnabled && (
+              {activeConversation?.id && aiEnabled && (
                 <div className="px-4 pb-2">
                   <SmartSuggestions
-                    conversationId={activeConversation.id.toString()}
+                    conversationId={activeConversation?.id?.toString() || ''}
                     lastMessage={messages[messages.length - 1]?.content}
                     userId={user?.id?.toString() || ''}
                     onSuggestionSelect={(suggestion) => {
@@ -383,8 +394,8 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
               {/* Message Input */}
               <form onSubmit={(e) => e.preventDefault()} className="p-4 border-t border-gray-200">
                 {selectedFile && (
-                  <div className="mb-3 p-2 bg-blue-50 rounded-lg flex items-center justify-between">
-                    <span className="text-sm text-blue-700">📎 {selectedFile.name}</span>
+                  <div className="mb-3 p-2 bg-blue-900/10 rounded-lg flex items-center justify-between">
+                    <span className="text-sm text-blue-900">📎 {selectedFile.name}</span>
                     <button
                       onClick={() => setSelectedFile(null)}
                       className="text-red-500 hover:text-red-700"
@@ -444,7 +455,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                         setNewMessage(val);
                         handleTyping();
                       }}
-                      conversationId={activeConversation?.id?.toString()}
+                      conversationId={activeConversation?.id?.toString() || ''}
                       userId={user?.id?.toString()}
                       placeholder={selectedFile ? 'Add a message (optional)' : 'Type a message...'}
                       className="min-h-[42px]"
@@ -455,7 +466,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                     <div className="flex items-center px-2">
                       <SentimentIndicator
                         message={newMessage}
-                        conversationId={activeConversation?.id?.toString()}
+                        conversationId={activeConversation?.id?.toString() || ''}
                         userId={user?.id?.toString()}
                         showDetails={false}
                       />
@@ -464,7 +475,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                   <button
                     onClick={handleSendMessage}
                     disabled={isUploading || (!newMessage.trim() && !selectedFile)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isUploading ? 'Uploading...' : 'Send'}
                   </button>

@@ -8,11 +8,11 @@ import { Eye, Edit3, Trash2, ToggleLeft, ToggleRight, PlusCircle } from 'lucide-
 
 interface Listing {
   id: string;
-  business_name: string;
-  business_category: string;
-  is_active: boolean;
+  businessName: string;
+  businessCategory: string;
+  isActive: boolean;
   // Add other relevant fields from your backend listing structure
-  // e.g., country_of_origin, created_at, logo_image_url
+  // e.g., countryOfOrigin, createdAt, logoImageUrl
 }
 
 interface FetchListingsResponse {
@@ -34,14 +34,29 @@ export default function ManageListingsPage() {
   // const [totalCount, setTotalCount] = useState(0); // If needed for display
 
   const fetchListings = useCallback(async (page = 1) => {
-    if (!user || user.user_type !== 'seller' || !token) {
+    // Check both user_type and role fields for compatibility - prioritize role field
+    const userRole = user?.role || user?.user_type;
+    
+    // Normalize role check to handle case variations
+    const normalizedRole = userRole ? userRole.toString().toUpperCase() : '';
+    const isSellerRole = normalizedRole === 'SELLER' || normalizedRole === 'SUPPLIER' || normalizedRole === 'SERVICE_PROVIDER';
+    
+    console.log('DEBUG fetchListings - user:', user);
+    console.log('DEBUG fetchListings - userRole:', userRole);
+    console.log('DEBUG fetchListings - normalizedRole:', normalizedRole);
+    console.log('DEBUG fetchListings - isSellerRole:', isSellerRole);
+    console.log('DEBUG fetchListings - token:', token ? 'present' : 'missing');
+    
+    if (!user || !isSellerRole || !token) {
+      console.log('DEBUG fetchListings - access denied, userRole:', userRole);
+      setError('Access Denied: You must be a seller to manage listings.');
       setIsLoading(false);
       return;
     }
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/listings/my-listings?page=${page}&limit=10`, {
+      const response = await fetch(`http://127.0.0.1:3001/api/listings/my-listings?page=${page}&limit=10`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) {
@@ -62,10 +77,16 @@ export default function ManageListingsPage() {
 
   useEffect(() => {
     if (!authLoading) {
-        if (user && user.user_type === 'seller') {
+        // Check both user_type and role fields for compatibility - prioritize role field
+        const userRole = user?.role || user?.user_type;
+        const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER';
+        console.log('DEBUG useEffect - user:', user);
+        console.log('DEBUG useEffect - userRole:', userRole);
+        console.log('DEBUG useEffect - isSellerRole:', isSellerRole);
+        if (user && isSellerRole) {
             fetchListings(currentPage);
-        } else if (user && user.user_type !== 'seller') {
-            setError('Access Denied: This page is for sellers only.');
+        } else if (user && !isSellerRole) {
+            setError(`Access Denied: This page is for sellers only. Current role: ${userRole}`);
             setIsLoading(false);
         } else {
             // Not logged in, or user object not yet available but auth not loading
@@ -80,7 +101,7 @@ export default function ManageListingsPage() {
     if (!token) return;
 
     try {
-      const response = await fetch(`/api/listings/${listingId}`, {
+      const response = await fetch(`http://127.0.0.1:3001/api/listings/${listingId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -97,13 +118,13 @@ export default function ManageListingsPage() {
   const toggleListingStatus = async (listing: Listing) => {
     if (!token) return;
     try {
-      const response = await fetch(`/api/listings/${listing.id}`, {
+      const response = await fetch(`http://127.0.0.1:3001/api/listings/${listing.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ is_active: !listing.is_active }),
+        body: JSON.stringify({ isActive: !listing.isActive }),
       });
       if (!response.ok) throw new Error('Failed to update listing status.');
       // Refresh listings
@@ -119,11 +140,19 @@ export default function ManageListingsPage() {
     return <div className="p-6 text-center"><p>Loading listings...</p></div>;
   }
 
-  if (user && user.user_type !== 'seller') {
+  // Check both user_type and role fields for compatibility - prioritize role field
+  const userRole = user?.role || user?.user_type;
+  const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER';
+  console.log('DEBUG render - user object:', JSON.stringify(user, null, 2));
+  console.log('DEBUG render - userRole:', userRole);
+  console.log('DEBUG render - isSellerRole:', isSellerRole);
+  if (user && !isSellerRole) {
     return (
       <div className="p-6 text-center">
         <h1 className="text-2xl font-semibold text-red-600">Access Denied</h1>
         <p className="mt-4 text-slate-600">You must be a seller to manage listings.</p>
+        <p className="mt-2 text-sm text-gray-500">Current user role: {userRole}</p>
+        <p className="mt-1 text-sm text-gray-500">User object: {JSON.stringify(user)}</p>
         <Link href="/dashboard" className="mt-6 inline-block px-6 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700">
           Go to Dashboard
         </Link>
@@ -165,18 +194,18 @@ export default function ManageListingsPage() {
             <tbody className="bg-white divide-y divide-slate-200">
               {listings.map((listing) => (
                 <tr key={listing.id} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{listing.business_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{listing.business_category}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{listing.businessName}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{listing.businessCategory}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${listing.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {listing.is_active ? 'Active' : 'Inactive'}
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${listing.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {listing.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button onClick={() => router.push(`/listings/${listing.id}`)} title="View Public Page" className="text-blue-600 hover:text-blue-800"><Eye size={18} /></button>
                     <button onClick={() => router.push(`/dashboard/listings/edit/${listing.id}`)} title="Edit Listing" className="text-yellow-600 hover:text-yellow-800"><Edit3 size={18} /></button>
-                    <button onClick={() => toggleListingStatus(listing)} title={listing.is_active ? 'Deactivate' : 'Activate'} className={`hover:text-slate-700 ${listing.is_active ? 'text-gray-500' : 'text-green-600'}`}>
-                      {listing.is_active ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                    <button onClick={() => toggleListingStatus(listing)} title={listing.isActive ? 'Deactivate' : 'Activate'} className={`hover:text-slate-700 ${listing.isActive ? 'text-gray-500' : 'text-green-600'}`}>
+                      {listing.isActive ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
                     </button>
                     <button onClick={() => handleDelete(listing.id)} title="Delete Listing" className="text-red-600 hover:text-red-800"><Trash2 size={18} /></button>
                   </td>

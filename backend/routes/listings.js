@@ -71,6 +71,8 @@ router.get('/stats', authMiddleware, async (req, res) => {
 // @desc    Create a new business listing
 // @access  Private (requires authentication, only sellers)
 router.post('/', authMiddleware, async (req, res) => {
+  console.log('POST /api/listings - Request body:', req.body);
+  console.log('POST /api/listings - User:', req.user);
   const {
     business_name,
     business_category,
@@ -89,9 +91,22 @@ router.post('/', authMiddleware, async (req, res) => {
     is_active,
   } = req.body;
 
-  // ensure seller
-  if (req.user.user_type !== 'seller') {
-    return res.status(403).json({ msg: 'Access denied. Only sellers can create listings.' });
+  // ensure seller - check both user_type and role fields for compatibility - prioritize role field
+  const userRole = req.user.role || req.user.user_type;
+  console.log('POST /api/listings - User role check:', { userRole, fullUser: req.user });
+  
+  // Check for all possible seller role variations (case insensitive)
+  const normalizedRole = userRole ? userRole.toString().toUpperCase() : '';
+  const isSellerRole = normalizedRole === 'SELLER' || normalizedRole === 'SUPPLIER' || normalizedRole === 'SERVICE_PROVIDER';
+  
+  if (!isSellerRole) {
+    console.log('Access denied - Role check failed:', { userRole, normalizedRole, isSellerRole });
+    return res.status(403).json({ 
+      msg: 'Access denied. You must be a seller to manage listings.', 
+      currentRole: userRole,
+      normalizedRole: normalizedRole,
+      debug: req.user 
+    });
   }
   if (!business_name || !business_category || !description || !country_of_origin) {
     return res.status(400).json({ msg: 'VALIDATION_ERROR: Missing required fields.' });
@@ -429,23 +444,47 @@ router.get('/:id', async (req, res) => {
 
 // ------------------ Prisma-based Update & Delete ------------------
 router.put('/:id', authMiddleware, async (req, res) => {
+  console.log('PUT /api/listings/:id - User:', req.user);
   const listingId = Number(req.params.id);
   if (Number.isNaN(listingId)) return res.status(400).json({ msg: 'Invalid listing ID.' });
-  if (req.user.user_type !== 'seller') return res.status(403).json({ msg: 'Only sellers can update listings.' });
+  // Check both user_type and role fields for compatibility - prioritize role field
+  const userRole = req.user.role || req.user.user_type;
+  const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER';
+  console.log('PUT /api/listings/:id - userRole:', userRole, 'isSellerRole:', isSellerRole);
+  if (!isSellerRole) return res.status(403).json({ msg: 'Only sellers can update listings.', currentRole: userRole });
   try {
-    const updated = await listingService.update(listingId, req.user.id, req.body);
+    // Transform snake_case fields to camelCase for Prisma
+    const transformedData = {};
+    if (req.body.business_name !== undefined) transformedData.businessName = req.body.business_name;
+    if (req.body.business_category !== undefined) transformedData.businessCategory = req.body.business_category;
+    if (req.body.description !== undefined) transformedData.description = req.body.description;
+    if (req.body.country_of_origin !== undefined) transformedData.countryOfOrigin = req.body.country_of_origin;
+    if (req.body.target_markets !== undefined) transformedData.targetMarkets = req.body.target_markets;
+    if (req.body.contact_email !== undefined) transformedData.contactEmail = req.body.contact_email;
+    if (req.body.contact_phone !== undefined) transformedData.contactPhone = req.body.contact_phone;
+    if (req.body.website_url !== undefined) transformedData.websiteUrl = req.body.website_url;
+    if (req.body.logo_image_url !== undefined) transformedData.logoImageUrl = req.body.logo_image_url;
+    if (req.body.gallery_image_urls !== undefined) transformedData.galleryImageUrls = req.body.gallery_image_urls;
+    if (req.body.isActive !== undefined) transformedData.isActive = req.body.isActive;
+    
+    console.log('PUT /api/listings/:id - transformedData:', transformedData);
+    const updated = await listingService.update(listingId, req.user.id, transformedData);
     if (!updated) return res.status(404).json({ msg: 'Listing not found.' });
     res.json(updated);
   } catch (e) {
     console.error('Error updating listing:', e);
-    res.status(500).json({ msg: 'Server error while updating listing.' });
+    console.error('Error stack:', e.stack);
+    res.status(500).json({ msg: 'Server error while updating listing.', error: e.message });
   }
 });
 
 router.delete('/:id', authMiddleware, async (req, res) => {
   const listingId = Number(req.params.id);
   if (Number.isNaN(listingId)) return res.status(400).json({ msg: 'Invalid listing ID.' });
-  if (req.user.user_type !== 'seller') return res.status(403).json({ msg: 'Only sellers can delete listings.' });
+  // Check both user_type and role fields for compatibility - prioritize role field
+  const userRole = req.user.role || req.user.user_type;
+  const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER';
+  if (!isSellerRole) return res.status(403).json({ msg: 'Only sellers can delete listings.' });
   try {
     await listingService.remove(listingId, req.user.id);
     res.json({ msg: 'Listing deleted.' });

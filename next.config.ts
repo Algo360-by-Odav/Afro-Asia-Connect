@@ -11,6 +11,14 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://127.0.0.1:3001/api/:path*',
+      },
+    ];
+  },
   webpack: (config, { isServer }) => {
     // Ensure @ alias works in both TS and JS files across all environments
     config.resolve.alias = {

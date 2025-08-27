@@ -50,14 +50,21 @@ router.get('/metrics', authenticateToken, async (req, res) => {
         role: true,
         firstName: true,
         lastName: true,
-        createdAt: true
+        isActive: true
       }
     });
 
     if (user) {
-      // Calculate days since registration for subscription renewal mock
-      const daysSinceRegistration = Math.floor((new Date() - new Date(user.createdAt)) / (1000 * 60 * 60 * 24));
-      metrics.subscription.renewsIn = Math.max(1, 30 - (daysSinceRegistration % 30));
+      metrics.subscription.plan = 'Basic Plan'; // Mock data since subscription fields don't exist
+      metrics.subscription.status = 'active';
+      
+      // Mock renewal date (30 days from now)
+      const mockExpiryDate = new Date();
+      mockExpiryDate.setDate(mockExpiryDate.getDate() + 30);
+      const today = new Date();
+      const diffTime = mockExpiryDate - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      metrics.subscription.renewsIn = Math.max(0, diffDays);
     }
 
     res.json({
@@ -81,49 +88,52 @@ router.get('/metrics', authenticateToken, async (req, res) => {
 router.get('/notifications', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { limit = 10, offset = 0 } = req.query;
 
+    // Get user notifications
     const notifications = await prisma.notification.findMany({
       where: { userId: userId },
       orderBy: { createdAt: 'desc' },
-      take: parseInt(limit),
-      skip: parseInt(offset)
-    }).catch(() => []);
+      take: 10
+    });
 
-    // If no notifications found, return mock data
+    // If no notifications exist, create some sample ones
     if (notifications.length === 0) {
-      const mockNotifications = [
+      const sampleNotifications = [
         {
-          id: 'notif-1',
+          userId: userId,
           type: 'info',
-          message: 'Welcome to AfroAsiaConnect! Complete your profile to get started.',
-          isRead: false,
-          createdAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString()
+          message: 'Complete your profile to get more visibility.',
+          isRead: false
         },
         {
-          id: 'notif-2',
+          userId: userId,
           type: 'success',
-          message: 'Your account has been successfully verified.',
-          isRead: false,
-          createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+          message: 'Your profile has been successfully updated.',
+          isRead: false
         }
       ];
 
+      // Create sample notifications
+      await prisma.notification.createMany({
+        data: sampleNotifications
+      });
+
+      // Fetch the newly created notifications
+      const newNotifications = await prisma.notification.findMany({
+        where: { userId: userId },
+        orderBy: { createdAt: 'desc' },
+        take: 10
+      });
+
       return res.json({
         success: true,
-        data: mockNotifications,
-        total: mockNotifications.length
+        data: newNotifications
       });
     }
 
-    const total = await prisma.notification.count({
-      where: { userId: userId }
-    }).catch(() => notifications.length);
-
     res.json({
       success: true,
-      data: notifications,
-      total: total
+      data: notifications
     });
 
   } catch (error) {
@@ -141,16 +151,25 @@ router.get('/notifications', authenticateToken, async (req, res) => {
 // @access  Private
 router.put('/notifications/:id/read', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params;
+    const notificationId = parseInt(req.params.id);
     const userId = req.user.id;
 
     const notification = await prisma.notification.updateMany({
-      where: { 
-        id: parseInt(id),
-        userId: userId 
+      where: {
+        id: notificationId,
+        userId: userId
       },
-      data: { isRead: true }
-    }).catch(() => null);
+      data: {
+        isRead: true
+      }
+    });
+
+    if (notification.count === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Notification not found'
+      });
+    }
 
     res.json({
       success: true,
@@ -223,6 +242,64 @@ router.get('/recent-activity', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch recent activities',
+      error: error.message
+    });
+  }
+});
+
+module.exports = router;
+    });
+
+    // Format activities
+    const activities = [];
+
+    recentBookings.forEach(booking => {
+      activities.push({
+        id: `booking-${booking.id}`,
+        type: 'booking',
+        text: `New booking for ${booking.service.serviceName}`,
+        timestamp: booking.createdAt,
+        link: `/dashboard/bookings`
+      });
+    });
+
+    recentMessages.forEach(message => {
+      const isReceived = message.senderId !== userId;
+      const otherParticipant = message.conversation.participants.find(p => p.id !== userId);
+      activities.push({
+        id: `message-${message.id}`,
+        type: 'message',
+        text: isReceived ? 
+          `New message from ${message.sender.firstName} ${message.sender.lastName}` :
+          `Sent message to ${otherParticipant?.firstName || 'Unknown'} ${otherParticipant?.lastName || ''}`,
+        timestamp: message.createdAt
+      });
+    });
+
+    recentLeads.forEach(lead => {
+      activities.push({
+        id: `lead-${lead.id}`,
+        type: 'lead',
+        text: `New inquiry: ${lead.subject}`,
+        timestamp: lead.createdAt,
+        link: `/dashboard/leads`
+      });
+    });
+
+    // Sort by timestamp and take top 10
+    activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const topActivities = activities.slice(0, 10);
+
+    res.json({
+      success: true,
+      data: topActivities
+    });
+
+  } catch (error) {
+    console.error('Error fetching recent activity:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch recent activity',
       error: error.message
     });
   }

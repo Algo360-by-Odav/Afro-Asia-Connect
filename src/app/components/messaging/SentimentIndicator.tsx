@@ -169,9 +169,9 @@ export const ConversationSentiment: React.FC<ConversationSentimentProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+      <div className="bg-blue-900/10 border border-blue-900/20 rounded-lg p-3">
         <div className="flex items-center space-x-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-900"></div>
           <span className="text-sm text-gray-600">Analyzing conversation...</span>
         </div>
       </div>
@@ -181,13 +181,13 @@ export const ConversationSentiment: React.FC<ConversationSentimentProps> = ({
   if (!insights) return null;
 
   return (
-    <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-3 mb-3">
+    <div className="bg-blue-900/10 border border-blue-900/20 rounded-lg p-3 mb-3">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-2">
           <span className="text-lg">📊</span>
-          <h4 className="text-sm font-medium text-gray-700">Conversation Insights</h4>
+          <h4 className="text-sm font-medium text-blue-900">Conversation Insights</h4>
         </div>
-        <span className="text-xs text-gray-500">AI Analysis</span>
+        <span className="text-xs text-blue-700">AI Analysis</span>
       </div>
 
       <div className="space-y-2">
@@ -217,8 +217,8 @@ export const ConversationSentiment: React.FC<ConversationSentimentProps> = ({
         </div>
 
         {insights.insights && insights.insights.length > 0 && (
-          <div className="mt-3 pt-2 border-t border-purple-200">
-            <h5 className="text-xs font-medium text-gray-700 mb-1">AI Insights:</h5>
+          <div className="mt-3 pt-2 border-t border-blue-900/20">
+            <h5 className="text-xs font-medium text-blue-900 mb-1">AI Insights:</h5>
             {insights.insights.map((insight: any, index: number) => (
               <div 
                 key={index}

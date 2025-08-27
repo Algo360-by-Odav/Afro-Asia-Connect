@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://127.0.0.1:3001/api/:path*',
+      },
+    ];
+  },
   webpack: (config, { isServer }) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,

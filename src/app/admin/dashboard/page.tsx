@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button';
-import { Badge } from '../../../components/ui/badge';
+import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { 
   Users, 
   Building2, 
@@ -50,7 +51,8 @@ const pieData = [
   { name: 'Service Providers', value: 860, color: '#f59e0b' },
 ];
 
-const AdminDashboard = () => {
+function AdminDashboard() {
+  const router = useRouter();
   const [filter, setFilter] = useState('all');
   const [sortKey, setSortKey] = useState('name');
   const [activeTab, setActiveTab] = useState('overview');
@@ -192,9 +194,16 @@ const AdminDashboard = () => {
               <p className="text-gray-600 mt-1">Manage and monitor your AfroAsiaConnect platform</p>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  console.log('Button clicked, navigating to /news');
+                  router.push('/news');
+                }}
+              >
                 <Globe className="w-4 h-4 mr-2" />
-                View Site
+                NewsPage
               </Button>
               <div className="relative">
                 <Bell className="w-6 h-6 text-gray-600" />

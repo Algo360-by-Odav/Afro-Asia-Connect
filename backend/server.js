@@ -37,6 +37,8 @@ const automationRoutes = require('./routes/automation');
 const advancedMessagingRoutes = require('./routes/advancedMessaging');
 const adminPanelRoutes = require('./routes/adminPanel');
 const marketInsightsRoutes = require('./routes/marketInsights');
+const premiumNewsRoutes = require('./routes/premiumNews');
+const categoriesRoutes = require('./routes/categories');
 const billingRoutes = require('./routes/billing');
 const teamRoutes = require('./routes/team');
 const teamsRoutes = require('./routes/teams'); // New advanced teams API
@@ -49,6 +51,7 @@ const smsRoutes = require('./routes/sms');
 const reminderJob = require('./jobs/reminderJob');
 const documentExpiryJob = require('./jobs/documentExpiryJob');
 const { startScheduledMessageJob } = require('./jobs/scheduledMessageJob');
+const spotlightRotationJob = require('./jobs/spotlightRotationJob');
 const { initializeSocket } = require('./socket/socketHandler');
 
 const PORT = process.env.PORT || 3001; // Backend server port, now respects .env
@@ -63,7 +66,9 @@ app.use(express.json());
 // allow frontend on different port with credentials
 app.use(cors({ 
   origin: [
-    'http://localhost:3000', 
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:60752',
     'http://127.0.0.1:61259', 
     'http://10.0.2.2:3001',
     'https://afroasia-connect.netlify.app',
@@ -109,6 +114,8 @@ app.use('/api/automation', automationRoutes);
 app.use('/api/advanced-messaging', advancedMessagingRoutes);
 app.use('/api/admin', adminPanelRoutes);
 app.use('/api/market-insights', marketInsightsRoutes);
+app.use('/api/premium-news', premiumNewsRoutes);
+app.use('/api/categories', categoriesRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/teams', teamsRoutes); // New advanced teams management API
@@ -124,6 +131,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve u
 reminderJob.start();
 documentExpiryJob.start();
 startScheduledMessageJob();
+spotlightRotationJob.start();
 console.log('📅 Cron jobs started');
 
 // Global error handlers - place them before app.listen

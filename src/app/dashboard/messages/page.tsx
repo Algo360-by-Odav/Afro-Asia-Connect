@@ -191,7 +191,7 @@ const MessagesPage: React.FC = () => {
       formData.append('file', file);
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/messaging/conversations/${activeConversation.id}/upload`,
+        `http://localhost:3001/api/messaging/conversations/${activeConversation.id}/upload`,
         {
           method: 'POST',
           headers: {
