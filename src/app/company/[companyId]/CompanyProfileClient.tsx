@@ -1,20 +1,14 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useParams } from 'next/navigation';
+import ProfileTopSection from '../../components/company-profile/ProfileTopSection';
+import ProfileMainContent from '../../components/company-profile/ProfileMainContent';
+import ProfileSidebar from '../../components/company-profile/ProfileSidebar';
 
-interface CompanyProfilePageProps {
-  params: Promise<{
-    companyId: string;
-  }>;
-}
-
-import ProfileTopSection from '@/app/components/company-profile/ProfileTopSection';
-import ProfileMainContent from '@/app/components/company-profile/ProfileMainContent';
-import ProfileSidebar from '@/app/components/company-profile/ProfileSidebar';
-
-export default function CompanyProfilePage({ params: paramsPromise }: CompanyProfilePageProps) {
-  const params = React.use(paramsPromise);
-  const companyId = params.companyId;
+export default function CompanyProfileClient() {
+  const params = useParams();
+  const companyId = params?.companyId as string;
   const [activeTab, setActiveTab] = useState('overview');
 
   // Mock company data - replace with actual data fetching later
@@ -75,3 +69,4 @@ export default function CompanyProfilePage({ params: paramsPromise }: CompanyPro
     </div>
   );
 }
+
