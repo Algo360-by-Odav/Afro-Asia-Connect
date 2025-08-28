@@ -17,7 +17,7 @@
   NODE_ENV = "development"
   NEXT_PUBLIC_API_URL = "https://afroasiaconnect-api-preview.netlify.app"
 
-[plugins]
+[[plugins]]
   package = "@netlify/next"
 
 [functions]
