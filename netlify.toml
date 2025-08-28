@@ -1,5 +1,5 @@
 [build]
-  publish = ".next"
+  publish = "out"
   command = "npm run build"
 
 [build.environment]
@@ -16,9 +16,6 @@
 [context.deploy-preview.environment]
   NODE_ENV = "development"
   NEXT_PUBLIC_API_URL = "https://afroasiaconnect-api-preview.netlify.app"
-
-[[plugins]]
-  package = "@netlify/next"
 
 [functions]
   directory = "netlify/functions"
