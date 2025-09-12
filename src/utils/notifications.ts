@@ -14,13 +14,13 @@ export class NotificationService {
   }
 
   private checkPermission(): void {
-    if ('Notification' in window) {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
       this.permission = Notification.permission;
     }
   }
 
   public async requestPermission(): Promise<NotificationPermission> {
-    if ('Notification' in window) {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
       this.permission = await Notification.requestPermission();
       return this.permission;
     }
@@ -40,7 +40,7 @@ export class NotificationService {
     } = {}
   ): Promise<boolean> {
     // Check if notifications are supported
-    if (!('Notification' in window)) {
+    if (!(typeof window !== 'undefined' && 'Notification' in window)) {
       console.warn('This browser does not support notifications');
       return false;
     }
@@ -102,7 +102,7 @@ export class NotificationService {
   }
 
   public isSupported(): boolean {
-    return 'Notification' in window;
+    return typeof window !== 'undefined' && 'Notification' in window;
   }
 
   public getPermission(): NotificationPermission {
@@ -110,4 +110,6 @@ export class NotificationService {
   }
 }
 
-export const notificationService = NotificationService.getInstance();
+// Avoid instantiating the service during SSR
+export const notificationService =
+  typeof window !== 'undefined' ? NotificationService.getInstance() : (undefined as unknown as NotificationService);
