@@ -78,7 +78,7 @@ function AuthFormContent({ initialMode = 'login' }: AuthFormProps) {
       return;
     }
 
-    const endpoint = mode === 'login' ? `${process.env.NEXT_PUBLIC_API_URL}/auth/login` : `${process.env.NEXT_PUBLIC_API_URL}/auth/register`;
+    const endpoint = mode === 'login' ? `${API_BASE_URL}/auth/login` : `${API_BASE_URL}/auth/register`;
     const body = mode === 'login' ? 
       { email: formData.email, password: formData.password } : 
       { email: formData.email, password: formData.password, user_type: formData.accountType, /* Add other registration fields like first_name, last_name if your backend expects them */ };
@@ -88,19 +88,31 @@ function AuthFormContent({ initialMode = 'login' }: AuthFormProps) {
       console.log('[AuthForm] API endpoint:', endpoint);
       console.log('[AuthForm] Request body:', JSON.stringify(body));
       
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      // Allow more time for backend cold starts (Render free tier can take ~20s to wake)
+      const doRequest = async (): Promise<Response> => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
+        try {
+          const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          });
+          return resp;
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      };
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
+      let response = await doRequest();
+      // If fetch was aborted, quickly retry once after a short backoff
+      if (!response.ok && response.status === 504) {
+        await new Promise((r) => setTimeout(r, 800));
+        response = await doRequest();
+      }
 
       console.log('[AuthForm] Response received. Status:', response.status, 'OK:', response.ok);
       
@@ -108,6 +120,11 @@ function AuthFormContent({ initialMode = 'login' }: AuthFormProps) {
       console.log('[AuthForm] Response data:', data);
 
       if (!response.ok) {
+        if (response.status === 501) {
+          setError('API route not implemented on this site yet. Please enable Next.js API handlers or set an external API URL.');
+          setIsLoading(false);
+          return;
+        }
         setError(data.msg || `An error occurred during ${mode}.`);
         setIsLoading(false);
         return;
@@ -157,7 +174,7 @@ function AuthFormContent({ initialMode = 'login' }: AuthFormProps) {
       console.error(`[AuthForm] handleSubmit CATCH block during ${mode}. Error message:`, (err instanceof Error ? err.message : String(err)), 'Full error object:', err);
       
       if ((err as Error).name === 'AbortError') {
-        setError('Request timed out. Please check your connection and try again.');
+        setError('Server took too long to respond. Please try again in a moment.');
       } else if ((err as Error).message === 'Failed to fetch') {
         setError('Unable to connect to server. Please ensure the backend is running.');
       } else {
