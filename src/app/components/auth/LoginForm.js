@@ -21,7 +21,7 @@ export default function LoginForm() {
     }
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -36,7 +36,8 @@ export default function LoginForm() {
       }
 
       // Use the login function from AuthContext to store token and user data
-      login(data.token, data.user);
+      // Backend returns data in format: { success: true, data: { token, user } }
+      login(data.data.token, data.data.user);
       
       // Redirect to a dashboard or home page
       // For now, let's assume a '/dashboard' route exists

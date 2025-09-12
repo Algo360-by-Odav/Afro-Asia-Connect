@@ -101,10 +101,10 @@ export default function ChatWidget({ className = '', defaultMinimized = true }: 
           <div className="flex items-center space-x-1">
             {activeConversation && (
               <>
-                <button className="p-1 hover:bg-blue-700 rounded">
+                <button className="p-1 hover:bg-blue-700 rounded" title="Start voice call">
                   <Phone className="h-4 w-4" />
                 </button>
-                <button className="p-1 hover:bg-blue-700 rounded">
+                <button className="p-1 hover:bg-blue-700 rounded" title="Start video call">
                   <Video className="h-4 w-4" />
                 </button>
               </>
@@ -112,6 +112,7 @@ export default function ChatWidget({ className = '', defaultMinimized = true }: 
             <button
               onClick={() => setIsMinimized(true)}
               className="p-1 hover:bg-blue-700 rounded"
+              title="Minimize chat"
             >
               <Minimize2 className="h-4 w-4" />
             </button>
@@ -242,6 +243,7 @@ export default function ChatWidget({ className = '', defaultMinimized = true }: 
                     type="submit"
                     disabled={!newMessage.trim() || !isConnected}
                     className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Send message"
                   >
                     <Send className="h-4 w-4" />
                   </button>

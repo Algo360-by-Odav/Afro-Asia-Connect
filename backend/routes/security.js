@@ -4,6 +4,11 @@ const encryptionService = require('../services/encryptionService');
 const securityAuditService = require('../services/securityAuditService');
 const dlpService = require('../services/dlpService');
 const authenticateToken = require('../middleware/authMiddleware');
+const adminMiddleware = require('../middleware/adminMiddleware');
+const rateLimitMiddleware = require('../middleware/rateLimitMiddleware');
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
 
 // Middleware to log security events
 const logSecurityEvent = (eventType, action) => {
@@ -312,6 +317,7 @@ router.get('/dlp-report',
 // Data retention endpoint
 router.post('/enforce-retention', 
   authenticateToken, 
+  adminMiddleware,
   logSecurityEvent('data_retention', 'ENFORCE_DATA_RETENTION'),
   async (req, res) => {
     try {
@@ -325,6 +331,169 @@ router.post('/enforce-retention',
     } catch (error) {
       console.error('Failed to enforce data retention:', error);
       res.status(500).json({ error: 'Failed to enforce data retention' });
+    }
+  }
+);
+
+// Security monitoring dashboard (admin only)
+router.get('/monitoring/dashboard', 
+  authenticateToken, 
+  adminMiddleware,
+  async (req, res) => {
+    try {
+      const { hours = 24 } = req.query;
+      const startTime = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+      const [
+        securityAlerts,
+        rateLimitViolations,
+        suspiciousIPs,
+        blockedRequests,
+        totalRequests
+      ] = await Promise.all([
+        prisma.securityAlert.count({
+          where: { createdAt: { gte: startTime } }
+        }),
+        prisma.rateLimitEntry.count({
+          where: { createdAt: { gte: startTime } }
+        }),
+        prisma.ipAccess.count({
+          where: { 
+            lastAccess: { gte: startTime },
+            accessCount: { gt: 1000 }
+          }
+        }),
+        prisma.requestLog.count({
+          where: { 
+            timestamp: { gte: startTime },
+            statusCode: { in: [429, 403, 401] }
+          }
+        }),
+        prisma.requestLog.count({
+          where: { timestamp: { gte: startTime } }
+        })
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          securityAlerts,
+          rateLimitViolations,
+          suspiciousIPs,
+          blockedRequests,
+          totalRequests,
+          period: `${hours} hours`
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching security dashboard:', error);
+      res.status(500).json({ error: 'Failed to fetch security dashboard' });
+    }
+  }
+);
+
+// Rate limit status endpoint
+router.get('/rate-limits/status', 
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+      const ip = req.ip;
+      const now = new Date();
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+      const [userRequests, ipRequests] = await Promise.all([
+        prisma.requestLog.count({
+          where: {
+            userId,
+            timestamp: { gte: oneHourAgo }
+          }
+        }),
+        prisma.requestLog.count({
+          where: {
+            ip,
+            timestamp: { gte: oneHourAgo }
+          }
+        })
+      ]);
+
+      const userLimit = req.user.role === 'ADMIN' ? 1000 : req.user.role === 'PROVIDER' ? 500 : 100;
+      const ipLimit = 1000;
+
+      res.json({
+        success: true,
+        data: {
+          user: {
+            requests: userRequests,
+            limit: userLimit,
+            remaining: Math.max(0, userLimit - userRequests)
+          },
+          ip: {
+            requests: ipRequests,
+            limit: ipLimit,
+            remaining: Math.max(0, ipLimit - ipRequests)
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching rate limit status:', error);
+      res.status(500).json({ error: 'Failed to fetch rate limit status' });
+    }
+  }
+);
+
+// Blacklist IP endpoint (admin only)
+router.post('/blacklist/ip', 
+  authenticateToken, 
+  adminMiddleware,
+  async (req, res) => {
+    try {
+      const { ip, reason } = req.body;
+
+      if (!ip) {
+        return res.status(400).json({ error: 'IP address is required' });
+      }
+
+      await prisma.blacklistedIP.create({
+        data: {
+          ip,
+          reason: reason || 'Manual blacklist',
+          isActive: true,
+          createdBy: req.user.id
+        }
+      });
+
+      res.json({
+        success: true,
+        message: `IP ${ip} has been blacklisted`
+      });
+    } catch (error) {
+      console.error('Error blacklisting IP:', error);
+      res.status(500).json({ error: 'Failed to blacklist IP' });
+    }
+  }
+);
+
+// Remove IP from blacklist (admin only)
+router.delete('/blacklist/ip/:ip', 
+  authenticateToken, 
+  adminMiddleware,
+  async (req, res) => {
+    try {
+      const { ip } = req.params;
+
+      await prisma.blacklistedIP.update({
+        where: { ip },
+        data: { isActive: false }
+      });
+
+      res.json({
+        success: true,
+        message: `IP ${ip} has been removed from blacklist`
+      });
+    } catch (error) {
+      console.error('Error removing IP from blacklist:', error);
+      res.status(500).json({ error: 'Failed to remove IP from blacklist' });
     }
   }
 );

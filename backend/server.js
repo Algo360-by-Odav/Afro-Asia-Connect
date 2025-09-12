@@ -48,42 +48,65 @@ const bookingsRoutes = require('./routes/bookings');
 const emailsRoutes = require('./routes/emails');
 const paymentsRoutes = require('./routes/payments');
 const smsRoutes = require('./routes/sms');
+const adminRoutes = require('./routes/admin');
+const verificationRoutes = require('./routes/verification');
+const searchRoutes = require('./routes/search');
+const i18nRoutes = require('./routes/i18n');
+const filesRoutes = require('./routes/files');
+const emailNotificationsRoutes = require('./routes/emailNotifications');
+const rateLimitMiddleware = require('./middleware/rateLimitMiddleware');
+const securityMiddleware = require('./middleware/securityMiddleware');
 const reminderJob = require('./jobs/reminderJob');
 const documentExpiryJob = require('./jobs/documentExpiryJob');
 const { startScheduledMessageJob } = require('./jobs/scheduledMessageJob');
 const spotlightRotationJob = require('./jobs/spotlightRotationJob');
 const { initializeSocket } = require('./socket/socketHandler');
+const notificationService = require('./services/notificationService');
 
 const PORT = process.env.PORT || 3001; // Backend server port, now respects .env
 const app = express();
 const server = http.createServer(app);
 const io = initializeSocket(server);
-console.log('[WebSocket] Socket.IO initialized');
 
-// Middleware to parse JSON bodies and cookies
-app.use(cookieParser()); // Middleware to parse cookies
-app.use(express.json());
-// allow frontend on different port with credentials
-app.use(cors({ 
-  origin: [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:60752',
-    'http://127.0.0.1:61259', 
-    'http://10.0.2.2:3001',
-    'https://afroasia-connect.netlify.app',
-    process.env.FRONTEND_URL || 'https://afroasia-connect.netlify.app'
-  ],
-  credentials: true 
-}));
+// Set Socket.IO instance in notification service for real-time notifications
+notificationService.setSocketIO(io);
+
+console.log('[WebSocket] Socket.IO initialized');
+console.log('🔔 NotificationService integrated with WebSocket');
+
+// Mount auth routes early with CORS and JSON parsing to ensure login/register
+// are not blocked by aggressive security middleware
+app.use('/auth', cors(securityMiddleware.corsOptions), express.json({ limit: '10mb' }), authRoutes);
+
+// Security middleware setup (applies to all other routes)
+app.use(securityMiddleware.securityHeaders);
+app.use(cors(securityMiddleware.corsOptions));
+app.use(rateLimitMiddleware.generalRateLimit);
+app.use(securityMiddleware.requestFingerprinting);
+app.use(securityMiddleware.ipFilter);
+app.use(securityMiddleware.securityMonitoring);
+
+// Request parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
+
+// Input sanitization and validation
+app.use(securityMiddleware.sanitizeInput);
+app.use(securityMiddleware.sqlInjectionProtection);
+app.use(securityMiddleware.honeypot);
 
 // A simple test route
 app.get('/', (req, res) => {
   res.send('AfroAsiaConnect Backend is running!');
 });
 
-// Authentication routes
-app.use('/api/auth', authRoutes);
+// Test auth route accessibility
+app.get('/auth/test', (req, res) => {
+  res.json({ message: 'Auth route is accessible', timestamp: new Date().toISOString() });
+});
+
+// Authentication routes already mounted early
 app.use('/api/listings', listingRoutes);
 app.use('/api/services', servicesRoutes);
 app.use('/api/leads', leadRoutes); 
@@ -112,7 +135,7 @@ app.use('/api/users', usersRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/automation', automationRoutes);
 app.use('/api/advanced-messaging', advancedMessagingRoutes);
-app.use('/api/admin', adminPanelRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/market-insights', marketInsightsRoutes);
 app.use('/api/premium-news', premiumNewsRoutes);
 app.use('/api/categories', categoriesRoutes);
@@ -125,6 +148,11 @@ app.use('/api/bookings', bookingsRoutes);
 app.use('/api/emails', emailsRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/sms', smsRoutes);
+app.use('/api/verification', verificationRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/i18n', i18nRoutes);
+app.use('/api/files', filesRoutes);
+app.use('/api/email-notifications', emailNotificationsRoutes);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve uploaded files statically
 
 // Start cron jobs

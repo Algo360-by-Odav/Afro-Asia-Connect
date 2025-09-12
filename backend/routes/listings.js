@@ -306,28 +306,6 @@ router.post('/', authMiddleware, async (req, res) => {
 
 
 */
-// @route   GET api/listings/:id
-// @desc    Get a single business listing by ID
-// @access  Public (or Private if you want to restrict who can view listings)
-router.get('/:id', async (req, res) => {
-  try {
-    const listingId = parseInt(req.params.id, 10);
-    if (isNaN(listingId)) {
-      return res.status(400).json({ msg: 'Invalid listing ID format.' });
-    }
-
-    const listing = await listingService.getById(listingId);
-
-    if (!listing) {
-      return res.status(404).json({ msg: 'Listing not found.' });
-    }
-
-    res.json(listing);
-  } catch (err) {
-    console.error('Error fetching listing by ID:', err.message);
-    res.status(500).json({ msg: 'Server error while fetching listing.' });
-  }
-});
 
 
 // @route   PUT api/listings/:id

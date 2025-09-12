@@ -17,6 +17,7 @@ interface ListingFormState {
   website_url: string;
   logo_image_url: string;
   gallery_image_urls: string[];
+  gallery_image_files: File[];
 }
 
 interface ListingData {
@@ -48,6 +49,10 @@ export default function EditListingClient() {
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string>('');
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
 
   useEffect(() => {
     if (id && token) {
@@ -76,6 +81,7 @@ export default function EditListingClient() {
             website_url: data.websiteUrl || '',
             logo_image_url: data.logoImageUrl || '',
             gallery_image_urls: data.galleryImageUrls || [],
+            gallery_image_files: [],
           });
         } catch (err: any) {
           console.error('Fetch listing error:', err);
@@ -97,6 +103,38 @@ export default function EditListingClient() {
     }
   };
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setLogoPreview(previewUrl);
+      setListing(prev => prev ? { ...prev, logo_image_url: previewUrl } : null);
+    }
+  };
+
+  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setGalleryFiles(prev => [...prev, ...files]);
+      const newPreviews = files.map(file => URL.createObjectURL(file));
+      setGalleryPreviews(prev => [...prev, ...newPreviews]);
+    }
+  };
+
+  const removeGalleryImage = (index: number) => {
+    setGalleryFiles(prev => prev.filter((_, i) => i !== index));
+    setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingGalleryImage = (index: number) => {
+    setListing(prev => {
+      if (!prev) return null;
+      const updatedUrls = prev.gallery_image_urls.filter((_, i) => i !== index);
+      return { ...prev, gallery_image_urls: updatedUrls };
+    });
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!listing || !id || !token) {
@@ -107,13 +145,67 @@ export default function EditListingClient() {
     setSubmitError(null);
 
     try {
+      let updatedListing = { ...listing };
+      
+      // If a new logo file was selected, upload it first
+      if (logoFile) {
+        const formData = new FormData();
+        formData.append('logo', logoFile);
+        
+        const uploadResponse = await fetch('http://127.0.0.1:3001/api/upload/logo', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+        
+        if (uploadResponse.ok) {
+          const uploadData = await uploadResponse.json();
+          updatedListing.logo_image_url = uploadData.url;
+        } else {
+          console.warn('Logo upload failed, proceeding with existing logo');
+        }
+      }
+      
+      // Upload gallery images if any
+      if (galleryFiles.length > 0) {
+        const galleryUrls: string[] = [];
+        
+        for (const file of galleryFiles) {
+          const galleryFormData = new FormData();
+          galleryFormData.append('file', file);
+          
+          const uploadResponse = await fetch('http://127.0.0.1:3001/api/upload', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: galleryFormData,
+          });
+          
+          if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json();
+            galleryUrls.push(uploadData.url);
+          } else {
+            console.warn('Gallery image upload failed for file:', file.name);
+          }
+        }
+        
+        // Combine uploaded URLs with existing URLs
+        updatedListing.gallery_image_urls = [...updatedListing.gallery_image_urls, ...galleryUrls];
+      }
+      
+      // Remove file objects before sending to API
+      const { gallery_image_files, ...submitData } = updatedListing;
+
       const response = await fetch(`http://127.0.0.1:3001/api/listings/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(listing),
+        body: JSON.stringify(submitData),
       });
 
       if (!response.ok) {
@@ -160,6 +252,106 @@ export default function EditListingClient() {
         <div>
           <label htmlFor="target_markets" className="block text-sm font-medium text-gray-700 mb-1">Target Markets (comma-separated)</label>
           <input type="text" name="target_markets" id="target_markets" value={listing.target_markets.join(', ')} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+        </div>
+        
+        <div>
+          <label htmlFor="contact_phone" className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+          <input type="tel" name="contact_phone" id="contact_phone" value={listing.contact_phone} onChange={handleChange} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+        </div>
+        
+        <div>
+          <label htmlFor="website_url" className="block text-sm font-medium text-gray-700 mb-1">Website URL</label>
+          <input type="url" name="website_url" id="website_url" value={listing.website_url} onChange={handleChange} placeholder="https://" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Logo Image</label>
+          <input 
+            type="file" 
+            accept="image/*" 
+            onChange={handleLogoChange}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
+          {(logoPreview || listing.logo_image_url) && (
+            <div className="mt-2">
+              <img 
+                src={logoPreview || listing.logo_image_url} 
+                alt="Logo preview" 
+                className="h-20 w-20 object-contain border rounded-md"
+              />
+            </div>
+          )}
+        </div>
+        
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Gallery Images</label>
+          
+          {/* Existing Gallery Images */}
+          {listing.gallery_image_urls.length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">Current Gallery Images:</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-3">
+                {listing.gallery_image_urls.map((url, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={url}
+                      alt={`Gallery image ${index + 1}`}
+                      className="w-full h-24 object-cover border rounded-md"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeExistingGalleryImage(index)}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* New Gallery Images Upload */}
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleGalleryUpload}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
+          
+          {/* New Gallery Previews */}
+          {galleryPreviews.length > 0 && (
+            <div className="mt-3">
+              <p className="text-sm text-gray-600 mb-2">New Images to Upload:</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {galleryPreviews.map((preview, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={preview}
+                      alt={`New gallery preview ${index + 1}`}
+                      className="w-full h-24 object-cover border rounded-md"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeGalleryImage(index)}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <p className="mt-1 text-xs text-gray-500">You can select multiple images at once. Click the × to remove images.</p>
+        </div>
+        
+        <div>
+          <label htmlFor="gallery_image_urls" className="block text-sm font-medium text-gray-700 mb-1">Additional Gallery URLs (optional)</label>
+          <input type="text" name="gallery_image_urls" id="gallery_image_urls" value={listing.gallery_image_urls.join(', ')} onChange={handleChange} placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
+          <p className="mt-1 text-xs text-gray-500">Comma-separated URLs for additional images hosted elsewhere.</p>
         </div>
 
         {submitError && <p className="text-red-500 text-sm">{submitError}</p>}

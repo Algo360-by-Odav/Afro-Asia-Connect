@@ -222,6 +222,7 @@ export default function NewsPage() {
                   value={preferredIndustry}
                   onChange={(e) => setPreferredIndustry(e.target.value)}
                   className="border rounded-xl px-3 py-2 text-sm"
+                  aria-label="Select preferred industry"
                 >
                   <option value="">Select industry...</option>
                   {categories.map((c) => (
@@ -295,7 +296,9 @@ export default function NewsPage() {
               <div className="overflow-hidden">
                 <div 
                   className="flex transition-transform duration-300 ease-in-out"
-                  style={{ transform: `translateX(-${currentSpotlightIndex * 100}%)` }}
+                  style={{
+                    transform: `translateX(-${currentSpotlightIndex * 100}%)`
+                  }}
                 >
                   {spotlight.map((s, index) => (
                     <div key={s.id} className="w-full flex-shrink-0 px-2">
@@ -326,6 +329,7 @@ export default function NewsPage() {
                       className={`w-2 h-2 rounded-full transition-colors ${
                         index === currentSpotlightIndex ? 'bg-white' : 'bg-white/40'
                       }`}
+                      aria-label={`Go to spotlight ${index + 1}`}
                     />
                   ))}
                 </div>

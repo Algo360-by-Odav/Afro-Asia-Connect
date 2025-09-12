@@ -53,7 +53,7 @@ const MessageScheduler: React.FC<MessageSchedulerProps> = ({
     setIsLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:3001/api/scheduled-messages?userId=${user.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/scheduled-messages?userId=${user.id}`,
         { credentials: 'include' }
       );
       
@@ -81,7 +81,7 @@ const MessageScheduler: React.FC<MessageSchedulerProps> = ({
     try {
       const scheduledDateTime = `${newSchedule.scheduledFor}T${newSchedule.time}:00`;
       
-      const response = await fetch('http://localhost:3001/api/scheduled-messages', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/scheduled-messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -111,7 +111,7 @@ const MessageScheduler: React.FC<MessageSchedulerProps> = ({
     if (!user) return;
     
     try {
-      const response = await fetch(`http://localhost:3001/api/scheduled-messages/${messageId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/scheduled-messages/${messageId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -285,6 +285,8 @@ const MessageScheduler: React.FC<MessageSchedulerProps> = ({
                     onChange={(e) => setNewSchedule(prev => ({ ...prev, scheduledFor: e.target.value }))}
                     min={new Date().toISOString().split('T')[0]}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    title="Select schedule date"
+                    placeholder="Select date"
                   />
                 </div>
                 
@@ -297,6 +299,8 @@ const MessageScheduler: React.FC<MessageSchedulerProps> = ({
                     value={newSchedule.time}
                     onChange={(e) => setNewSchedule(prev => ({ ...prev, time: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    title="Select schedule time"
+                    placeholder="Select time"
                   />
                 </div>
                 

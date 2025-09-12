@@ -11,7 +11,11 @@ router.get('/my-leads', authMiddleware, async (req, res) => {
   // or directly querying leads by seller_id if that's part of your leads table.
   // For now, returning placeholder data.
 
-  if (req.user.user_type !== 'seller') {
+  // Check if user is a seller/supplier
+  const userRole = req.user.role || req.user.user_type;
+  const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER' || userRole === 'supplier';
+  
+  if (!isSellerRole) {
     return res.status(403).json({ msg: 'Access denied. Only sellers can view leads.' });
   }
 

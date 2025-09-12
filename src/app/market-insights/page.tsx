@@ -72,7 +72,7 @@ const MarketInsightsPage: React.FC = () => {
   const fetchMarketData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/market-insights/overview?timeRange=${timeRange}&category=${selectedCategory}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/market-insights/overview?timeRange=${timeRange}&category=${selectedCategory}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -410,10 +410,13 @@ const MarketInsightsPage: React.FC = () => {
                         <div className="text-xs text-gray-600 mb-1">Market Demand</div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div 
-                            className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                            style={{ width: `${region.demand}%` }}
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            data-width={region.demand}
                             aria-label={`Market demand: ${region.demand}%`}
                             title={`Market demand: ${region.demand}%`}
+                            ref={(el) => {
+                              if (el) el.style.width = `${region.demand}%`;
+                            }}
                           ></div>
                         </div>
                       </div>
@@ -421,10 +424,13 @@ const MarketInsightsPage: React.FC = () => {
                         <div className="text-xs text-gray-600 mb-1">Competition Level</div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div 
-                            className="bg-red-500 h-2 rounded-full transition-all duration-300" 
-                            style={{ width: `${region.competition}%` }}
+                            className="bg-red-500 h-2 rounded-full transition-all duration-300"
+                            data-width={region.competition}
                             aria-label={`Competition level: ${region.competition}%`}
                             title={`Competition level: ${region.competition}%`}
+                            ref={(el) => {
+                              if (el) el.style.width = `${region.competition}%`;
+                            }}
                           ></div>
                         </div>
                       </div>

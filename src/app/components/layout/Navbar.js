@@ -43,7 +43,7 @@ export default function Navbar() {
               />
             </Link>
             <div className="hidden md:block">
-              <div className="ml-4 sm:ml-8 lg:ml-18 flex items-baseline space-x-3 sm:space-x-6 lg:space-x-8">
+              <div className="ml-4 sm:ml-8 lg:ml-18 flex items-baseline space-x-2 sm:space-x-4 lg:space-x-6">
                 {/* Standard Next.js Link for Home */}
                 <Link href="/"
                    className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors duration-200 ${pathname === '/' ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-200 hover:bg-white/10 hover:text-white'}`}>
@@ -55,11 +55,13 @@ export default function Navbar() {
                     Browse Directory
                 </Link>
 
-                {/* Standard Next.js Link for Post a Request */}
-                <Link href="/post-request"
-                   className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors duration-200 ${pathname === '/post-request' ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-200 hover:bg-white/10 hover:text-white'}`}>
-                    Post a Request
-                </Link>
+                {/* Post a Request - Only show for buyers */}
+                {(!user || (user && (user.role === 'BUYER' || user.user_type === 'buyer' || user.role === 'buyer'))) && (
+                  <Link href="/post-request"
+                     className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors duration-200 ${pathname === '/post-request' ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-200 hover:bg-white/10 hover:text-white'}`}>
+                      Post a Request
+                  </Link>
+                )}
                 {/* Standard Next.js Link for Pricing */}
                 <Link href="/pricing"
                    className={`px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors duration-200 ${pathname === '/pricing' ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-200 hover:bg-white/10 hover:text-white'}`}>
@@ -76,7 +78,7 @@ export default function Navbar() {
             </div>
           </div>
           <div className="hidden md:block">
-            <div className="ml-auto flex items-center space-x-2 sm:space-x-4 lg:space-x-6 pr-2 pl-4 sm:pl-8">
+            <div className="ml-auto flex items-center space-x-1 sm:space-x-2 lg:space-x-4 pr-2 pl-2 sm:pl-4">
               {!loading && user ? (
                 <>
                   <Link href={user.isAdmin ? "/admin/dashboard" : "/dashboard"}
@@ -113,7 +115,7 @@ export default function Navbar() {
               ) : !loading && (
                 <>
                    <div className="hidden sm:block border-l border-gray-400 pl-2 sm:pl-4 ml-1 sm:ml-2">
-                     <span className="text-gray-200 text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">henryoye@gmail.com</span>
+                     <span className="text-gray-200 text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none">{user?.email || 'user@example.com'}</span>
                    </div>
                    <Link href="/auth"
                       className="px-2 sm:px-4 py-2 rounded-md text-xs sm:text-sm font-medium text-white bg-red-500 hover:bg-red-600 transition-colors duration-200">
@@ -174,11 +176,13 @@ export default function Navbar() {
              className={`block px-3 py-2 rounded-md text-base font-medium ${pathname === '/browse-directory' ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-300 hover:bg-white/10 hover:text-white'}`}>
               Browse Directory
           </Link>
-          {/* Standard Next.js Link for Post a Request - Mobile */}
-          <Link href="/post-request"
-             className={`block px-3 py-2 rounded-md text-base font-medium ${pathname === '/post-request' ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-300 hover:bg-white/10 hover:text-white'}`}>
-              Post a Request
-          </Link>
+          {/* Post a Request - Only show for buyers - Mobile */}
+          {(!user || (user && (user.role === 'BUYER' || user.user_type === 'buyer' || user.role === 'buyer'))) && (
+            <Link href="/post-request"
+               className={`block px-3 py-2 rounded-md text-base font-medium ${pathname === '/post-request' ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-300 hover:bg-white/10 hover:text-white'}`}>
+                Post a Request
+            </Link>
+          )}
           {/* Standard Next.js Link for Pricing - Mobile */}
           <Link href="/pricing"
              className={`block px-3 py-2 rounded-md text-base font-medium ${pathname === '/pricing' ? 'bg-[var(--accent-gold)] text-[var(--primary-blue)]' : 'text-gray-300 hover:bg-white/10 hover:text-white'}`}>

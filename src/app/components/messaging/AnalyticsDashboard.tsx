@@ -38,7 +38,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ isOpen, onClose
     setIsLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:3001/api/analytics/user/${user.id}?days=${selectedPeriod}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/analytics/user/${user.id}?days=${selectedPeriod}`,
         { credentials: 'include' }
       );
       
@@ -95,6 +95,8 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ isOpen, onClose
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(Number(e.target.value))}
               className="px-3 py-1 border border-gray-300 rounded text-sm"
+              aria-label="Select time period for analytics"
+              title="Select time period for analytics"
             >
               <option value={7}>Last 7 days</option>
               <option value={30}>Last 30 days</option>

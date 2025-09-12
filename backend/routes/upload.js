@@ -16,4 +16,18 @@ router.post('/', auth, upload.single('file'), (req, res) => {
   res.status(201).json({ url });
 });
 
+// POST /api/upload/logo - logo upload for listings
+router.post('/logo', auth, upload.single('logo'), (req, res) => {
+  if (!req.file) return res.status(400).json({ msg: 'No logo file uploaded' });
+  
+  // Validate file type
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+  if (!allowedTypes.includes(req.file.mimetype)) {
+    return res.status(400).json({ msg: 'Invalid file type. Please upload an image file.' });
+  }
+  
+  const url = getPublicUrl(req.file.filename);
+  res.status(201).json({ url, filename: req.file.filename });
+});
+
 module.exports = router;

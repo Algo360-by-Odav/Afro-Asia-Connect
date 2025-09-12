@@ -383,84 +383,95 @@ router.get('/platform/overview', authenticateToken, requireRole(['ADMIN']), asyn
   }
 });
 
-// General analytics dashboard endpoint (for API tests)
+// Comprehensive dashboard analytics endpoint
 router.get('/dashboard', authenticateToken, async (req, res) => {
   try {
-    // Return basic analytics data for API testing
-    const totalUsers = await prisma.user.count();
-    const totalServices = await prisma.service.count();
-    const totalBookings = await prisma.booking.count();
-
-    res.json({
-      success: true,
-      data: {
-        totalUsers,
-        totalServices,
-        totalBookings,
-        status: 'operational'
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching analytics dashboard:', error);
-    res.status(500).json({ 
-      success: false,
-      error: 'Failed to fetch analytics dashboard' 
-    });
-  }
-});
-
-// Platform overview analytics (for admin dashboard)
-router.get('/platform/overview', authenticateToken, async (req, res) => {
-  try {
     const { days = 30 } = req.query;
-    
-    // Get platform-wide statistics
-    const totalUsers = await prisma.user.count();
-    const totalServices = await prisma.service.count();
-    const totalBookings = await prisma.booking.count();
-    const activeProviders = await prisma.user.count({
-      where: { role: 'SERVICE_PROVIDER', isActive: true }
-    });
+    const userId = req.user.id;
+    const userRole = req.user.role;
 
-    // Get recent activity (last 30 days)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - parseInt(days));
-
-    const recentUsers = await prisma.user.count({
-      where: { createdAt: { gte: thirtyDaysAgo } }
-    });
-
-    const recentBookings = await prisma.booking.count({
-      where: { createdAt: { gte: thirtyDaysAgo } }
-    });
-
-    const platformData = {
-      overview: {
-        totalUsers,
-        totalServices,
-        totalBookings,
-        activeProviders,
-        recentUsers,
-        recentBookings
-      },
-      growth: {
-        userGrowth: recentUsers,
-        bookingGrowth: recentBookings,
-        period: `${days} days`
-      }
-    };
+    const analytics = await analyticsService.getDashboardAnalytics(userId, userRole, parseInt(days));
 
     res.json({
       success: true,
-      data: platformData
+      data: analytics,
+      period: { days: parseInt(days) }
     });
   } catch (error) {
-    console.error('Error fetching platform overview:', error);
+    console.error('Error fetching dashboard analytics:', error);
     res.status(500).json({ 
       success: false,
-      error: 'Failed to fetch platform overview analytics' 
+      error: 'Failed to fetch dashboard analytics' 
     });
   }
 });
+
+// Export analytics data (admin only)
+router.get('/export', authenticateToken, requireRole(['ADMIN']), async (req, res) => {
+  try {
+    const { type = 'revenue', format = 'json', days = 30 } = req.query;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(days));
+
+    let data = {};
+    
+    switch (type) {
+      case 'revenue':
+        data = await analyticsService.getRevenueAnalytics(startDate);
+        break;
+      case 'users':
+        data = await analyticsService.getUserGrowthAnalytics(startDate);
+        break;
+      case 'bookings':
+        data = await analyticsService.getBookingAnalytics(startDate);
+        break;
+      case 'services':
+        data = await analyticsService.getServiceAnalytics(startDate);
+        break;
+      default:
+        data = await analyticsService.getPlatformAnalytics(startDate);
+    }
+
+    if (format === 'csv') {
+      // Convert to CSV format
+      const csv = convertToCSV(data);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${type}-analytics-${new Date().toISOString().split('T')[0]}.csv"`);
+      res.send(csv);
+    } else {
+      res.json({
+        success: true,
+        data,
+        exportedAt: new Date().toISOString(),
+        type,
+        period: { days: parseInt(days) }
+      });
+    }
+  } catch (error) {
+    console.error('Error exporting analytics:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to export analytics data' 
+    });
+  }
+});
+
+// Helper function to convert data to CSV
+function convertToCSV(data) {
+  if (!data || typeof data !== 'object') return '';
+  
+  const headers = Object.keys(data);
+  const csvHeaders = headers.join(',');
+  
+  if (Array.isArray(data[headers[0]])) {
+    const rows = data[headers[0]].map((_, index) => 
+      headers.map(header => data[header][index] || '').join(',')
+    );
+    return [csvHeaders, ...rows].join('\n');
+  }
+  
+  const values = headers.map(header => data[header] || '').join(',');
+  return [csvHeaders, values].join('\n');
+}
 
 module.exports = router;

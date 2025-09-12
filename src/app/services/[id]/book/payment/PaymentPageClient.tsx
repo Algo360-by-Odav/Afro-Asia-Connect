@@ -55,7 +55,7 @@ function PaymentPageContent() {
 
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`/api/bookings/${bookingId}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings/${bookingId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }

@@ -5,11 +5,11 @@ import Link from 'next/link';
 
 interface BusinessListing {
   id: string | number;
-  business_name: string;
-  business_category: string;
-  country_of_origin: string;
-  target_markets?: string; // e.g., "Asia", "Africa, Europe"
-  logo_image_url?: string;
+  businessName: string;
+  businessCategory: string;
+  countryOfOrigin: string;
+  targetMarkets?: string[];
+  logoImageUrl?: string;
   // Add other relevant fields from your API response
 }
 
@@ -28,28 +28,40 @@ export default function BrowseDirectoryPage() {
   const itemsPerPage = 6; // Show 6 listings per page
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchListings = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('http://127.0.0.1:3001/api/listings', {
+        cache: 'no-store', // Prevent caching
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setAllListings(data);
+      setFilteredListings(data); // Initially, all listings are shown
+      // Extract unique countries for the filter dropdown
+      const countries = Array.from(
+        new Set(data.map((item: BusinessListing) => item.countryOfOrigin).filter(Boolean) as string[])
+      );
+      setUniqueCountries(['All', ...countries.sort()]);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchListings() {
-      try {
-        const response = await fetch('http://127.0.0.1:3001/api/listings');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setAllListings(data);
-        setFilteredListings(data); // Initially, all listings are shown
-        // Extract unique countries for the filter dropdown
-        const countries = Array.from(
-          new Set(data.map((item: BusinessListing) => item.country_of_origin).filter(Boolean) as string[])
-        );
-        setUniqueCountries(['All', ...countries.sort()]);
-      } catch (e: any) {
-        setError(e.message);
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchListings();
   }, []);
 
@@ -60,28 +72,28 @@ export default function BrowseDirectoryPage() {
     // Filter by search term (business name)
     if (searchTerm) {
       currentListings = currentListings.filter(listing =>
-        listing.business_name.toLowerCase().includes(searchTerm.toLowerCase())
+        listing.businessName?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Filter by category
     if (selectedCategory && selectedCategory !== 'All') {
       currentListings = currentListings.filter(listing =>
-        listing.business_category === selectedCategory
+        listing.businessCategory === selectedCategory
       );
     }
 
         // Filter by Country of Origin
     if (selectedCountry && selectedCountry !== 'All') {
       currentListings = currentListings.filter(listing =>
-        listing.country_of_origin === selectedCountry
+        listing.countryOfOrigin === selectedCountry
       );
     }
 
     // Filter by Target Market
     if (selectedTargetMarket && selectedTargetMarket !== 'All') {
       currentListings = currentListings.filter(listing =>
-        listing.target_markets && listing.target_markets.includes(selectedTargetMarket)
+        listing.targetMarkets && listing.targetMarkets.includes(selectedTargetMarket)
       );
     }
 
@@ -97,14 +109,36 @@ export default function BrowseDirectoryPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <header className="mb-10 text-center">
-          <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">
-            Browse Our Directory
-          </h1>
-          <p className="mt-4 text-xl text-gray-600">
-            Discover businesses, services, and opportunities across Africa and Asia.
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Browse Business Directory</h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Discover premium businesses across Africa and Asia. Connect with verified suppliers, manufacturers, and service providers.
           </p>
-        </header>
+          <div className="mt-6">
+            <button
+              onClick={() => fetchListings(true)}
+              disabled={refreshing}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+            >
+              {refreshing ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <svg className="-ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh Listings
+                </>
+              )}
+            </button>
+          </div>
+        </div>
 
         <div className="bg-white shadow-xl rounded-lg p-8">
           {/* Search and Filter Section */}
@@ -178,16 +212,16 @@ export default function BrowseDirectoryPage() {
             {currentItems.map((listing: BusinessListing) => (
                   <div key={listing.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow flex flex-col">
                     <div className="w-full h-40 bg-gray-100 rounded-md mb-4 flex items-center justify-center overflow-hidden">
-                      {listing.logo_image_url ? (
-                        <img src={listing.logo_image_url} alt={`${listing.business_name} logo`} className="w-full h-full object-contain p-2" />
+                      {listing.logoImageUrl ? (
+                        <img src={listing.logoImageUrl} alt={`${listing.businessName} logo`} className="w-full h-full object-contain p-2" />
                       ) : (
                         <span className="text-gray-400 text-sm">No Logo Available</span>
                       )}
                     </div>
-                    <h3 className="text-xl font-semibold text-sky-700 mb-2 truncate" title={listing.business_name}>{listing.business_name}</h3>
-                    <p className="text-sm text-gray-600 mb-1">Sector: {listing.business_category || 'N/A'}</p>
-                    <p className="text-sm text-gray-600 mb-1">Origin: {listing.country_of_origin || 'N/A'}</p>
-                    <p className="text-sm text-gray-600 mb-3">Targets: {listing.target_markets || 'N/A'}</p>
+                    <h3 className="text-xl font-semibold text-sky-700 mb-2 truncate" title={listing.businessName}>{listing.businessName}</h3>
+                    <p className="text-sm text-gray-600 mb-1">Sector: {listing.businessCategory || 'N/A'}</p>
+                    <p className="text-sm text-gray-600 mb-1">Origin: {listing.countryOfOrigin || 'N/A'}</p>
+                    <p className="text-sm text-gray-600 mb-3">Targets: {Array.isArray(listing.targetMarkets) ? listing.targetMarkets.join(', ') : (listing.targetMarkets || 'N/A')}</p>
                     <div className="mt-auto">
                       <Link href={`/listings/${listing.id}`} className="text-sky-600 hover:text-sky-800 font-medium text-sm">
                         View Profile &rarr;

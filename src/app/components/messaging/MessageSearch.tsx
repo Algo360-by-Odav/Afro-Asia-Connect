@@ -35,7 +35,7 @@ const MessageSearch: React.FC<MessageSearchProps> = ({ isOpen, onClose, onSelect
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
 
   // Debounced search
   useEffect(() => {
@@ -64,7 +64,7 @@ const MessageSearch: React.FC<MessageSearchProps> = ({ isOpen, onClose, onSelect
     setIsSearching(true);
     try {
       const response = await fetch(
-        `http://localhost:3001/api/messaging/search?userId=${user.id}&q=${encodeURIComponent(searchQuery)}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/messaging/search?userId=${user.id}&q=${encodeURIComponent(searchQuery)}`,
         { credentials: 'include' }
       );
       

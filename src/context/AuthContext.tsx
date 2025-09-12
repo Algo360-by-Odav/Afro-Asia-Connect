@@ -197,37 +197,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const fetchUser = async () => {
-    // This function would typically be called to refresh user data
-    // or after certain operations like profile update.
+    // This function refreshes user data from the backend
     console.log('AuthContext: fetchUser called');
     let currentToken = null;
     if (typeof window !== 'undefined') {
       currentToken = localStorage.getItem('token');
     }
     if (!currentToken) {
-      // setUser(null); // Ensure user is cleared if no token
-      // setToken(null);
       return;
     }
     setIsLoading(true);
-    // try {
-      // const response = await fetch('/api/auth/me', {
-        // headers: { 'Authorization': `Bearer ${currentToken}` },
-      // });
-      // if (response.ok) {
-        // const data = await response.json();
-        // setUser(data.user);
-      // } else {
-        // console.error('Failed to fetch user, token might be invalid');
-        // logout(); // Token is invalid or expired, log out user
-      // }
-    // } catch (error) {
-      // console.error('Error fetching user:', error);
-      // // Potentially logout if network error or server issue prevents validation
-    // }
-    // Dummy implementation for now
-    if (currentToken === 'dummy-jwt-token' && !user) {
-        setUser({ id: 1, email: 'user@example.com', firstName: 'Dummy' });
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
+        headers: { 'Authorization': `Bearer ${currentToken}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('AuthContext: Fresh user data received:', data);
+        if (data.user) {
+          const normalizedUser: User = {
+            ...data.user,
+            user_type: data.user.role || data.user.user_type,
+            role: data.user.role || data.user.user_type,
+          };
+          setUser(normalizedUser);
+          // Update localStorage with fresh data
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('user', JSON.stringify(normalizedUser));
+          }
+        }
+      } else {
+        console.error('Failed to fetch user, token might be invalid');
+        logout(); // Token is invalid or expired, log out user
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      // Don't logout on network errors, just log the error
     }
     setIsLoading(false);
   };

@@ -13,19 +13,58 @@ export default function ListingsPage() {
     const fetchListings = async () => {
       setLoading(true);
       setError(null);
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/listings`);
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.msg || `Failed to fetch listings: ${response.status}`);
+      
+      // Mock data for static export - replace with real API when backend is ready
+      const mockListings: BusinessListing[] = [
+        {
+          id: '1',
+          business_name: 'AfroTech Solutions',
+          description: 'Leading technology services provider connecting African and Asian markets',
+          category: 'Technology',
+          location: 'Lagos, Nigeria',
+          contact_email: 'info@afrotech.com',
+          contact_phone: '+234-123-456-7890',
+          website_url: 'https://afrotech.com',
+          logo_image_url: 'https://picsum.photos/seed/afrotech/200/200',
+          banner_image_url: 'https://picsum.photos/seed/afrotech-banner/800/400',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: '2',
+          business_name: 'Asia Spice Trading',
+          description: 'Premium spice and food products from Asia to Africa',
+          category: 'Food & Agriculture',
+          location: 'Singapore',
+          contact_email: 'contact@asiaspice.com',
+          contact_phone: '+65-9876-5432',
+          website_url: 'https://asiaspice.com',
+          logo_image_url: 'https://picsum.photos/seed/asiaspice/200/200',
+          banner_image_url: 'https://picsum.photos/seed/asiaspice-banner/800/400',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        {
+          id: '3',
+          business_name: 'Ghana Gold Exports',
+          description: 'Authentic African gold and precious metals trading',
+          category: 'Mining & Metals',
+          location: 'Accra, Ghana',
+          contact_email: 'sales@ghanagold.com',
+          contact_phone: '+233-555-123-456',
+          website_url: 'https://ghanagold.com',
+          logo_image_url: 'https://picsum.photos/seed/ghanagold/200/200',
+          banner_image_url: 'https://picsum.photos/seed/ghanagold-banner/800/400',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         }
-        const data: BusinessListing[] = await response.json();
-        setListings(data);
-      } catch (err: any) {
-        console.error('Error fetching listings:', err);
-        setError(err.message || 'An unexpected error occurred while fetching listings.');
-      }
-      setLoading(false);
+      ];
+      
+      // Simulate API delay
+      setTimeout(() => {
+        setListings(mockListings);
+        setLoading(false);
+      }, 1000);
     };
 
     fetchListings();

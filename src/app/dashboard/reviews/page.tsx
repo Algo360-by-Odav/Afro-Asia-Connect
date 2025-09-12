@@ -51,7 +51,7 @@ export default function ReviewsPage() {
 
   /* ------------------------- data fetch helpers ------------------------ */
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
-  const api = (path: string) => fetch(`http://localhost:3001/api/reviews/${path}`, { headers:{ Authorization:`Bearer ${token}` }}).then(r=>r.json());
+  const api = (path: string) => fetch(`${process.env.NEXT_PUBLIC_API_URL}/reviews/${path}`, { headers:{ Authorization:`Bearer ${token}` }}).then(r=>r.json());
 
   const refreshData = async () => {
     setLoading(true);
@@ -85,7 +85,7 @@ export default function ReviewsPage() {
     
     setSubmittingResponse(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/reviews/reviews/${reviewId}/respond`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reviews/reviews/${reviewId}/respond`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -4,7 +4,20 @@ require('dotenv').config({ path: '../.env' }); // Ensure .env is loaded relative
 // Authentication middleware
 const authenticateToken = function(req, res, next) {
   // Get token from cookie or Authorization header
-  const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+  let token = null;
+  
+  // Try to get token from Authorization header first
+  if (req.headers && req.headers.authorization) {
+    const authHeader = req.headers.authorization;
+    if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    }
+  }
+  
+  // Fallback to cookie if no Authorization header
+  if (!token && req.cookies && req.cookies.token) {
+    token = req.cookies.token;
+  }
 
   // Check if not token
   if (!token) {

@@ -95,18 +95,24 @@ model Company {
   spotlights  Spotlight[]
 }
 
-enum Role {
+enum UserRole {
   BUYER
-  SUPPLIER
+  SELLER
   SERVICE_PROVIDER
   ADMIN
+}
+
+enum VerificationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model VerificationRequest {
   id          Int       @id @default(autoincrement())
   company     Company   @relation(fields: [companyId], references: [id])
   companyId   Int
-  status      VerificationStatus @default(PENDING)
+  status      VerificationRequestStatus @default(PENDING)
   documents   Json
   createdAt   DateTime  @default(now())
 }

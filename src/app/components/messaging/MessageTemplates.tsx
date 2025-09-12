@@ -56,7 +56,7 @@ const MessageTemplates: React.FC<MessageTemplatesProps> = ({ isOpen, onClose, on
     try {
       const categoryParam = selectedCategory === 'all' ? '' : `&category=${selectedCategory}`;
       const response = await fetch(
-        `http://localhost:3001/api/message-templates?userId=${user.id}${categoryParam}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/message-templates?userId=${user.id}${categoryParam}`,
         { credentials: 'include' }
       );
       
@@ -80,7 +80,7 @@ const MessageTemplates: React.FC<MessageTemplatesProps> = ({ isOpen, onClose, on
     if (!user) return;
     
     try {
-      const response = await fetch('http://localhost:3001/api/message-templates/default', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/message-templates/default`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -99,7 +99,7 @@ const MessageTemplates: React.FC<MessageTemplatesProps> = ({ isOpen, onClose, on
     if (!user || !newTemplate.title.trim() || !newTemplate.content.trim()) return;
     
     try {
-      const response = await fetch('http://localhost:3001/api/message-templates', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/message-templates`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -124,7 +124,7 @@ const MessageTemplates: React.FC<MessageTemplatesProps> = ({ isOpen, onClose, on
     
     try {
       // Increment usage count
-      await fetch(`http://localhost:3001/api/message-templates/${template.id}/use`, {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/message-templates/${template.id}/use`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -151,7 +151,7 @@ const MessageTemplates: React.FC<MessageTemplatesProps> = ({ isOpen, onClose, on
     if (!user) return;
     
     try {
-      const response = await fetch(`http://localhost:3001/api/message-templates/${templateId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/message-templates/${templateId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

@@ -103,23 +103,33 @@ router.post('/register', async (req, res) => {
 
 // ----- Prisma-based User Login Route -----
 router.post('/login', async (req, res) => {
+  console.log('[AUTH] Login request received:', { email: req.body.email, hasPassword: !!req.body.password });
   const { email, password } = req.body;
 
   // Basic validation
   if (!email || !password) {
+    console.log('[AUTH] Missing email or password');
     return res.status(400).json({ msg: 'Please enter both email and password.' });
   }
 
   try {
     // Check if user exists
+    console.log('[AUTH] Looking for user with email:', email);
     const user = await prisma.user.findUnique({ where: { email } });
+    console.log('[AUTH] User found:', !!user, user ? `ID: ${user.id}, Active: ${user.isActive}` : 'null');
+    
     if (!user || user.isActive === false) {
+      console.log('[AUTH] User not found or inactive');
       return res.status(400).json({ msg: 'Invalid credentials or user not found.' });
     }
 
     // Compare password
+    console.log('[AUTH] Comparing password...');
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('[AUTH] Password match:', isMatch);
+    
     if (!isMatch) {
+      console.log('[AUTH] Password mismatch');
       return res.status(400).json({ msg: 'Invalid credentials.' });
     }
 

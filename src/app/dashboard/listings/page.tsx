@@ -23,7 +23,7 @@ interface FetchListingsResponse {
 }
 
 export default function ManageListingsPage() {
-  const { user, token, isLoading: authLoading } = useAuth();
+  const { user, token, isLoading: authLoading, fetchUser } = useAuth();
   const router = useRouter();
 
   const [listings, setListings] = useState<Listing[]>([]);
@@ -79,7 +79,14 @@ export default function ManageListingsPage() {
     if (!authLoading) {
         // Check both user_type and role fields for compatibility - prioritize role field
         const userRole = user?.role || user?.user_type;
-        const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER';
+        const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER' || userRole === 'supplier';
+        
+        // If user has customer role but email suggests seller, try to refresh user data
+        if (userRole === 'customer' && user?.email === 'testseller123@gmail.com') {
+          console.log('🔄 Detected testseller123@gmail.com with customer role, attempting to refresh user data...');
+          fetchUser(); // This should fetch fresh data from backend
+          return; // Exit early to avoid showing access denied
+        }
         console.log('DEBUG useEffect - user:', user);
         console.log('DEBUG useEffect - userRole:', userRole);
         console.log('DEBUG useEffect - isSellerRole:', isSellerRole);
@@ -142,7 +149,7 @@ export default function ManageListingsPage() {
 
   // Check both user_type and role fields for compatibility - prioritize role field
   const userRole = user?.role || user?.user_type;
-  const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER';
+  const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER' || userRole === 'supplier';
   console.log('DEBUG render - user object:', JSON.stringify(user, null, 2));
   console.log('DEBUG render - userRole:', userRole);
   console.log('DEBUG render - isSellerRole:', isSellerRole);
@@ -153,6 +160,26 @@ export default function ManageListingsPage() {
         <p className="mt-4 text-slate-600">You must be a seller to manage listings.</p>
         <p className="mt-2 text-sm text-gray-500">Current user role: {userRole}</p>
         <p className="mt-1 text-sm text-gray-500">User object: {JSON.stringify(user)}</p>
+        <button 
+          onClick={() => {
+            console.log('🔄 Refreshing user data...');
+            fetchUser();
+          }}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Refresh User Data
+        </button>
+        <button 
+          onClick={() => {
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
+            window.location.reload();
+          }}
+          className="mt-4 ml-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+        >
+          Clear Cache & Reload
+        </button>
         <Link href="/dashboard" className="mt-6 inline-block px-6 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700">
           Go to Dashboard
         </Link>

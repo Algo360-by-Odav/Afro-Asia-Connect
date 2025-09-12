@@ -200,7 +200,7 @@ export default function EditListingClient() {
       setLoadingData(true);
       setError(null);
       try {
-        const response = await fetch(`/api/listings/${listingId}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/listings/${listingId}`);
         if (!response.ok) {
           if (response.status === 404) {
             throw new Error('Listing not found.');
@@ -243,7 +243,7 @@ export default function EditListingClient() {
     };
 
     try {
-      const response = await fetch(`/api/listings/${listingId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/listings/${listingId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

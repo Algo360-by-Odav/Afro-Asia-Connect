@@ -609,6 +609,168 @@ class EmailService {
 
     return { html, text };
   }
+
+  // Generate welcome email content
+  generateWelcomeEmail(user) {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Welcome to AfroAsiaConnect</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+          .content { padding: 30px; background: #f9fafb; }
+          .feature { background: white; padding: 20px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #667eea; }
+          .footer { text-align: center; padding: 20px; color: #666; }
+          .button { background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎉 Welcome to AfroAsiaConnect!</h1>
+            <p>Connecting Africa and Asia through exceptional services</p>
+          </div>
+          
+          <div class="content">
+            <p>Dear ${user.firstName || 'Valued Member'},</p>
+            <p>Welcome to AfroAsiaConnect! We're thrilled to have you join our growing community of service providers and customers.</p>
+            
+            <div class="feature">
+              <h3>🔍 Discover Services</h3>
+              <p>Browse thousands of professional services from verified providers across Africa and Asia.</p>
+            </div>
+            
+            <div class="feature">
+              <h3>💼 Offer Your Services</h3>
+              <p>Share your skills and expertise with our global community of customers.</p>
+            </div>
+            
+            <div class="feature">
+              <h3>🌟 Build Your Reputation</h3>
+              <p>Earn reviews and ratings to establish trust and grow your business.</p>
+            </div>
+            
+            <div style="text-align: center;">
+              <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard" class="button">
+                Get Started
+              </a>
+            </div>
+            
+            <p>If you have any questions, our support team is here to help. Welcome aboard!</p>
+          </div>
+          
+          <div class="footer">
+            <p>Best regards,<br>The AfroAsiaConnect Team</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+      Welcome to AfroAsiaConnect!
+      
+      Dear ${user.firstName || 'Valued Member'},
+      
+      Welcome to AfroAsiaConnect! We're thrilled to have you join our growing community.
+      
+      What you can do:
+      - Discover Services: Browse professional services from verified providers
+      - Offer Your Services: Share your skills with our global community
+      - Build Your Reputation: Earn reviews and ratings to grow your business
+      
+      Get started: ${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard
+      
+      Best regards,
+      The AfroAsiaConnect Team
+    `;
+
+    return { html, text };
+  }
+
+  // Generate password reset email content
+  generatePasswordResetEmail(user, resetToken) {
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/reset-password?token=${resetToken}`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Password Reset Request</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #dc2626; color: white; padding: 20px; text-align: center; }
+          .content { padding: 20px; background: #f9fafb; }
+          .reset-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #dc2626; }
+          .footer { text-align: center; padding: 20px; color: #666; }
+          .button { background: #dc2626; color: white; padding: 15px 30px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 20px 0; }
+          .warning { background: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 6px; margin: 15px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🔐 Password Reset Request</h1>
+            <p>Reset your AfroAsiaConnect password</p>
+          </div>
+          
+          <div class="content">
+            <p>Hello ${user.firstName || 'User'},</p>
+            <p>We received a request to reset your password for your AfroAsiaConnect account.</p>
+            
+            <div class="reset-box">
+              <h3>Reset Your Password</h3>
+              <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
+              
+              <div style="text-align: center;">
+                <a href="${resetUrl}" class="button">
+                  Reset Password
+                </a>
+              </div>
+              
+              <p><small>Or copy and paste this link: ${resetUrl}</small></p>
+            </div>
+            
+            <div class="warning">
+              <p><strong>⚠️ Security Notice:</strong></p>
+              <p>If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>Best regards,<br>The AfroAsiaConnect Team</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+      Password Reset Request - AfroAsiaConnect
+      
+      Hello ${user.firstName || 'User'},
+      
+      We received a request to reset your password for your AfroAsiaConnect account.
+      
+      Reset your password by clicking this link (expires in 1 hour):
+      ${resetUrl}
+      
+      If you didn't request this password reset, please ignore this email.
+      
+      Best regards,
+      The AfroAsiaConnect Team
+    `;
+
+    return { html, text };
+  }
 }
 
 module.exports = new EmailService();

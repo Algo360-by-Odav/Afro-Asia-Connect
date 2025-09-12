@@ -182,7 +182,7 @@ export default function DashboardPage() {
     : baseSidebarItems;
 
   return (
-    <div className="flex flex-1" style={{ minHeight: 'calc(100vh - 120px)' }}>
+    <div className="flex flex-1 min-h-[calc(100vh-120px)]">
       {/* Sidebar */}
       <aside className="hidden md:block md:w-64 bg-slate-800 text-slate-100 p-4 space-y-3 shadow-lg flex-shrink-0">
         <div className="text-center py-4 mb-2 border-b border-slate-700">

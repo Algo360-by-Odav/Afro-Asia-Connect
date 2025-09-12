@@ -33,7 +33,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
   const [newMessage, setNewMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [typingTimeout, setTypingTimeout] = useState<number | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
@@ -77,7 +77,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
     formData.append('senderId', user?.id?.toString() || '');
     
     try {
-      const response = await fetch('http://localhost:3001/api/message-files/upload', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/message-files/upload`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
@@ -143,8 +143,8 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-full sm:h-5/6 flex overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-[90vh] sm:h-5/6 flex overflow-hidden relative">
         {/* Top Right Controls */}
         <div className="absolute top-4 right-4 flex items-center space-x-2 z-10">
           {/* Feature buttons */}
@@ -422,7 +422,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                             <div className="flex items-center space-x-2 p-2 bg-white bg-opacity-20 rounded">
                               <span className="text-lg">📎</span>
                               <a
-                                href={`http://localhost:3001${message.fileUrl}`}
+                                href={`${process.env.NEXT_PUBLIC_API_URL}${message.fileUrl}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-sm underline hover:no-underline"

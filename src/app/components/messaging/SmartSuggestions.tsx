@@ -34,7 +34,7 @@ const SmartSuggestions: React.FC<SmartSuggestionsProps> = ({
     setError(null);
 
     try {
-      const response = await fetch('/api/ai/suggestions', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/suggestions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

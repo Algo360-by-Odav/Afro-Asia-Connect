@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { API_BASE_URL } from '@/config/api';
 import { useAuth } from '@/context/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -76,7 +75,7 @@ export default function BookServiceClient() {
   useEffect(() => {
     const fetchService = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/services/${serviceId}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/services/${serviceId}`);
         if (!response.ok) {
           setError('Service not found');
           return;
@@ -111,7 +110,7 @@ export default function BookServiceClient() {
     setIsSubmitting(true);
     
     try {
-      const response = await fetch('http://localhost:3001/api/bookings', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -151,7 +150,7 @@ export default function BookServiceClient() {
     
     setIsCheckingAvailability(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/bookings/availability/${params?.id}?date=${bookingData.date}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookings/availability/${params?.id}?date=${bookingData.date}`);
       if (response.ok) {
         const data = await response.json();
         setAvailableTimeSlots(data.availableSlots || []);

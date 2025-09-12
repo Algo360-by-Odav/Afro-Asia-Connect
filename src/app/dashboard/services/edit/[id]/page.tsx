@@ -6,7 +6,6 @@ export async function generateStaticParams() {
 }
 
 export const dynamic = 'force-static';
-export const dynamicParams = false;
 
 export default function EditServicePage() {
   return <EditServiceClient />;

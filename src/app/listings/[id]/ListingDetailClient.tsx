@@ -17,25 +17,25 @@ interface ProductDetail {
 // Define the detailed listing interface
 interface DetailedBusinessListing {
   id: string | number;
-  user_id: string | number;
-  business_name: string;
-  business_category: string;
+  userId: string | number;
+  businessName: string;
+  businessCategory: string;
   subsector?: string;
   description: string | null;
-  company_overview?: string;
-  country_of_origin: string | null;
-  target_markets: string[] | null;
-  contact_email: string;
-  contact_phone: string | null;
-  website_url: string | null;
-  logo_image_url: string | null;
-  gallery_image_urls: string[] | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  languages_spoken?: string[];
-  is_verified?: boolean;
-  products_info?: ProductDetail[];
+  companyOverview?: string;
+  countryOfOrigin: string | null;
+  targetMarkets: string[] | null;
+  contactEmail: string;
+  contactPhone: string | null;
+  websiteUrl: string | null;
+  logoImageUrl: string | null;
+  galleryImageUrls: string[] | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  languagesSpoken?: string[];
+  isVerified?: boolean;
+  productsInfo?: ProductDetail[];
 }
 
 // Helper function to format date string
@@ -72,7 +72,7 @@ export default function ListingDetailClient() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`http://127.0.0.1:3001/api/listings/${id}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/listings/${id}`);
         if (!response.ok) {
           const errorData = await response.json();
           if (response.status === 404) {
@@ -83,6 +83,8 @@ export default function ListingDetailClient() {
           throw new Error(errorData.msg || `Failed to fetch listing: ${response.status}`);
         }
         const data: DetailedBusinessListing = await response.json();
+        console.log('Listing data received:', data);
+        console.log('Gallery URLs:', data.galleryImageUrls);
         setListing(data);
       } catch (err: any) {
         console.error(`Error fetching listing ${id}:`, err);
@@ -139,23 +141,23 @@ export default function ListingDetailClient() {
           <div className="md:flex-shrink-0 md:w-1/2 bg-gray-100 flex items-center justify-center p-6">
             <img 
               className="h-64 w-auto object-contain rounded-lg shadow-md"
-              src={listing.logo_image_url || defaultLogo} 
-              alt={`${listing.business_name} logo`} 
+              src={listing.logoImageUrl?.startsWith('/uploads/') ? `http://127.0.0.1:3001${listing.logoImageUrl}` : listing.logoImageUrl || defaultLogo} 
+              alt={`${listing.businessName} logo`} 
               onError={(e) => { (e.target as HTMLImageElement).src = defaultLogo; }}
             />
           </div>
           <div className="p-8 md:w-1/2">
-            <div className="uppercase tracking-wide text-sm text-indigo-600 font-semibold">{listing.business_category}</div>
+            <div className="uppercase tracking-wide text-sm text-indigo-600 font-semibold">{listing.businessCategory}</div>
             <h1 className="block mt-1 text-3xl leading-tight font-bold text-black hover:underline">
-                {listing.business_name}
-                {listing.is_verified && (
+                {listing.businessName}
+                {listing.isVerified && (
                   <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full align-middle">
                     Verified
                   </span>
                 )}
               </h1>
-            {listing.country_of_origin && (
-                <p className="mt-2 text-gray-500"><span className="font-medium text-gray-700">From:</span> {listing.country_of_origin}</p>
+            {listing.countryOfOrigin && (
+                <p className="mt-2 text-gray-500"><span className="font-medium text-gray-700">From:</span> {listing.countryOfOrigin}</p>
             )}
           </div>
         </div>
@@ -164,19 +166,19 @@ export default function ListingDetailClient() {
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">Business Details</h2>
           <div className="space-y-3 text-gray-700">
             {listing.description && <p><span className="font-semibold">Company Overview:</span> {listing.description}</p>}
-            {listing.target_markets && listing.target_markets.length > 0 && (
-              <p><span className="font-semibold">Target Markets:</span> {listing.target_markets.join(', ')}</p>
+            {listing.targetMarkets && listing.targetMarkets.length > 0 && (
+              <p><span className="font-semibold">Target Markets:</span> {listing.targetMarkets.join(', ')}</p>
             )}
             {listing.subsector && (
-              <p><span className="font-semibold">Sector/Subsector:</span> {listing.business_category} / {listing.subsector}</p>
+              <p><span className="font-semibold">Sector/Subsector:</span> {listing.businessCategory} / {listing.subsector}</p>
             )}
-            {listing.languages_spoken && listing.languages_spoken.length > 0 && (
-              <p><span className="font-semibold">Languages Spoken:</span> {listing.languages_spoken.join(', ')}</p>
+            {listing.languagesSpoken && listing.languagesSpoken.length > 0 && (
+              <p><span className="font-semibold">Languages Spoken:</span> {listing.languagesSpoken.join(', ')}</p>
             )}
             {user ? (
               <>
-                <p><span className="font-semibold">Contact Email:</span> <a href={`mailto:${listing.contact_email}`} className="text-indigo-600 hover:text-indigo-800 hover:underline">{listing.contact_email}</a></p>
-                {listing.contact_phone && <p><span className="font-semibold">Contact Phone:</span> {listing.contact_phone}</p>}
+                <p><span className="font-semibold">Contact Email:</span> <a href={`mailto:${listing.contactEmail}`} className="text-indigo-600 hover:text-indigo-800 hover:underline">{listing.contactEmail}</a></p>
+                {listing.contactPhone && <p><span className="font-semibold">Contact Phone:</span> {listing.contactPhone}</p>}
               </>
             ) : (
               <div className="mt-4 p-4 bg-yellow-50 border border-yellow-300 rounded-md">
@@ -185,20 +187,20 @@ export default function ListingDetailClient() {
                 </p>
               </div>
             )}
-            {listing.website_url && (
-              <p><span className="font-semibold">Website:</span> <a href={listing.website_url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-800 hover:underline">{listing.website_url}</a></p>
+            {listing.websiteUrl && (
+              <p><span className="font-semibold">Website:</span> <a href={listing.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-800 hover:underline">{listing.websiteUrl}</a></p>
             )}
-            <p><span className="font-semibold">Listing Active Since:</span> {formatDate(listing.created_at)}</p>
-            <p><span className="font-semibold">Last Updated:</span> {formatDate(listing.updated_at)}</p>
+            <p><span className="font-semibold">Listing Active Since:</span> {formatDate(listing.createdAt)}</p>
+            <p><span className="font-semibold">Last Updated:</span> {formatDate(listing.updatedAt)}</p>
           </div>
         </div>
 
         {/* Products Section */}
         <div className="px-8 py-6 border-t border-gray-200">
           <h2 className="text-2xl font-semibold text-gray-800 mb-6">Products</h2>
-          {listing.products_info && listing.products_info.length > 0 ? (
+          {listing.productsInfo && listing.productsInfo.length > 0 ? (
             <div className="space-y-8">
-              {listing.products_info.map((product, index) => (
+              {listing.productsInfo.map((product, index) => (
                 <div key={index} className="p-6 bg-gray-50 rounded-lg shadow-md border border-gray-200">
                   <h3 className="text-xl font-semibold text-indigo-700 mb-3">{product.name}</h3>
                   {product.images && product.images.length > 0 && (
@@ -231,11 +233,19 @@ export default function ListingDetailClient() {
         {/* Gallery Section */}
         <div className="px-8 py-6 border-t border-gray-200">
           <h2 className="text-2xl font-semibold text-gray-800 mb-4">Gallery</h2>
-          {listing.gallery_image_urls && listing.gallery_image_urls.length > 0 ? (
+          {listing.galleryImageUrls && Array.isArray(listing.galleryImageUrls) && listing.galleryImageUrls.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {listing.gallery_image_urls.map((url, index) => (
+              {listing.galleryImageUrls.filter(url => url && url.trim() !== '').map((url, index) => (
                 <div key={index} className="aspect-w-1 aspect-h-1 rounded-lg overflow-hidden shadow-md">
-                  <img src={url || defaultLogo} alt={`Gallery image ${index + 1}`} className="object-cover w-full h-full" onError={(e) => { (e.target as HTMLImageElement).src = defaultLogo; }}/>
+                  <img 
+                    src={`http://127.0.0.1:3001${url}`} 
+                    alt={`Gallery image ${index + 1}`} 
+                    className="object-cover w-full h-full" 
+                    onError={(e) => { 
+                      console.error('Failed to load gallery image:', url);
+                      (e.target as HTMLImageElement).src = defaultLogo; 
+                    }}
+                  />
                 </div>
               ))}
             </div>
@@ -246,10 +256,10 @@ export default function ListingDetailClient() {
 
         <div className="px-8 py-6 border-t border-gray-200 text-center">
           <p className="text-sm text-gray-500">
-            Listing created on: {formatDate(listing.created_at)}
+            Listing created on: {formatDate(listing.createdAt)}
           </p>
           <p className="text-sm text-gray-500">
-            Last updated: {formatDate(listing.updated_at)}
+            Last updated: {formatDate(listing.updatedAt)}
           </p>
           <Link href="/listings"
             className="mt-6 inline-block px-6 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg shadow hover:bg-gray-300 transition duration-150 ease-in-out">

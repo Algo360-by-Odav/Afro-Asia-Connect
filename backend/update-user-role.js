@@ -4,26 +4,24 @@ const prisma = new PrismaClient();
 
 async function updateUserToSeller() {
   try {
-    console.log('🔧 Updating user role to seller...\n');
+    console.log('🔧 Updating testseller123@gmail.com role to seller...\n');
     
-    // Get the first user (or you can specify an email)
-    const users = await prisma.user.findMany({
-      take: 1,
-      orderBy: { id: 'asc' }
+    // Find the specific user by email
+    const user = await prisma.user.findUnique({
+      where: { email: 'testseller123@gmail.com' }
     });
     
-    if (users.length === 0) {
-      console.log('❌ No users found in database');
+    if (!user) {
+      console.log('❌ User testseller123@gmail.com not found in database');
       return;
     }
     
-    const user = users[0];
     console.log(`Found user: ${user.email} (ID: ${user.id})`);
     console.log(`Current role: ${user.role || 'null'}, user_type: ${user.user_type || 'null'}`);
     
     // Update user to be a seller
     const updatedUser = await prisma.user.update({
-      where: { id: user.id },
+      where: { email: 'testseller123@gmail.com' },
       data: {
         role: 'seller',
         user_type: 'seller'

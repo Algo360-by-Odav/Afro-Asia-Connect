@@ -9,11 +9,11 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
 import DashboardScreen from './src/screens/dashboard/DashboardScreen';
-import ServiceDiscoveryScreen from './src/screens/services/ServiceDiscoveryScreen';
-import BookingsScreen from './src/screens/bookings/BookingsScreen';
-import MessagesScreen from './src/screens/messages/MessagesScreen';
-import ProfileScreen from './src/screens/profile/ProfileScreen';
-import AnalyticsScreen from './src/screens/analytics/AnalyticsScreen';
+import ServiceManagementScreen from './src/screens/ServiceManagementScreen';
+import BookingManagementScreen from './src/screens/BookingManagementScreen';
+import ProfileScreen from './src/screens/ProfileScreen';
+import MessagingScreen from './src/screens/MessagingScreen';
+import EarningsScreen from './src/screens/EarningsScreen';
 
 // Navigation Types
 export type RootStackParamList = {
@@ -111,12 +111,12 @@ function MainNavigator() {
       />
       <MainTab.Screen 
         name="Bookings" 
-        component={BookingsScreen}
+        component={BookingManagementScreen}
         options={{ title: 'My Bookings' }}
       />
       <MainTab.Screen 
         name="Messages" 
-        component={MessagesScreen}
+        component={MessagingScreen}
         options={{ title: 'Messages' }}
       />
       <MainTab.Screen 
@@ -126,7 +126,7 @@ function MainNavigator() {
       />
       <MainTab.Screen 
         name="More" 
-        component={AnalyticsScreen}
+        component={EarningsScreen}
         options={{ title: 'More' }}
       />
     </MainTab.Navigator>

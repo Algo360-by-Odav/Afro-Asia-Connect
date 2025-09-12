@@ -17,21 +17,23 @@ interface Lead {
 }
 
 export default function ViewLeadsPage() {
-  const { user, token, isLoading: authLoading } = useAuth();
+  const { user, token, isLoading: authLoading, fetchUser } = useAuth();
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchLeads = useCallback(async () => {
-    if (!user || user.user_type !== 'seller' || !token) {
+    const userRole = user?.role || user?.user_type;
+    const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER' || userRole === 'supplier';
+    if (!user || !isSellerRole || !token) {
       setIsLoading(false);
       return;
     }
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/leads/my-leads`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/leads/my-leads`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) {
@@ -49,16 +51,26 @@ export default function ViewLeadsPage() {
 
   useEffect(() => {
     if (!authLoading) {
-        if (user && user.user_type === 'seller') {
+        const userRole = user?.role || user?.user_type;
+        const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER' || userRole === 'supplier';
+        
+        // If user has customer role but email suggests seller, try to refresh user data
+        if (userRole === 'customer' && user?.email === 'testseller123@gmail.com') {
+          console.log('🔄 Detected testseller123@gmail.com with customer role, attempting to refresh user data...');
+          fetchUser();
+          return;
+        }
+        
+        if (user && isSellerRole) {
             fetchLeads();
-        } else if (user && user.user_type !== 'seller') {
+        } else if (user && !isSellerRole) {
             setError('Access Denied: This page is for sellers only.');
             setIsLoading(false);
         } else {
             setIsLoading(false); 
         }
     }
-  }, [authLoading, user, fetchLeads]);
+  }, [authLoading, user, fetchLeads, fetchUser]);
 
   // Placeholder for future action
   // const handleViewLeadDetails = (leadId: string) => {
@@ -70,11 +82,35 @@ export default function ViewLeadsPage() {
     return <div className="p-6 text-center"><p>Loading leads...</p></div>;
   }
 
-  if (user && user.user_type !== 'seller') {
+  const userRole = user?.role || user?.user_type;
+  const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER' || userRole === 'supplier';
+  
+  if (user && !isSellerRole) {
     return (
       <div className="p-6 text-center">
         <h1 className="text-2xl font-semibold text-red-600">Access Denied</h1>
         <p className="mt-4 text-slate-600">You must be a seller to view leads.</p>
+        <p className="mt-2 text-sm text-gray-500">Current user role: {userRole}</p>
+        <button 
+          onClick={() => {
+            console.log('🔄 Refreshing user data...');
+            fetchUser();
+          }}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Refresh User Data
+        </button>
+        <button 
+          onClick={() => {
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
+            window.location.reload();
+          }}
+          className="mt-4 ml-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+        >
+          Clear Cache & Reload
+        </button>
         <Link href="/dashboard" className="mt-6 inline-block px-6 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700">
           Go to Dashboard
         </Link>

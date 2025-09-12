@@ -15,7 +15,7 @@ interface AuthFormProps {
 
 function AuthFormContent({ initialMode = 'login' }: AuthFormProps) {
   const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID'; // Replace with your actual Client ID or use env var
-  const GOOGLE_REDIRECT_URI = process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/callback/google'; // Replace with your actual Redirect URI or use env var
+  const GOOGLE_REDIRECT_URI = process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI || `${process.env.NEXT_PUBLIC_API_URL}/auth/callback/google`; // Replace with your actual Redirect URI or use env var
 
   const handleGoogleSignIn = () => {
     console.log('Attempting Google Sign In...');
@@ -78,7 +78,7 @@ function AuthFormContent({ initialMode = 'login' }: AuthFormProps) {
       return;
     }
 
-    const endpoint = mode === 'login' ? 'http://localhost:3001/api/auth/login' : 'http://localhost:3001/api/auth/register';
+    const endpoint = mode === 'login' ? `${process.env.NEXT_PUBLIC_API_URL}/auth/login` : `${process.env.NEXT_PUBLIC_API_URL}/auth/register`;
     const body = mode === 'login' ? 
       { email: formData.email, password: formData.password } : 
       { email: formData.email, password: formData.password, user_type: formData.accountType, /* Add other registration fields like first_name, last_name if your backend expects them */ };
@@ -87,15 +87,25 @@ function AuthFormContent({ initialMode = 'login' }: AuthFormProps) {
       console.log('[AuthForm] handleSubmit: Attempting to login with email:', formData.email);
       console.log('[AuthForm] API endpoint:', endpoint);
       console.log('[AuthForm] Request body:', JSON.stringify(body));
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
+
+      console.log('[AuthForm] Response received. Status:', response.status, 'OK:', response.ok);
+      
       const data = await response.json();
+      console.log('[AuthForm] Response data:', data);
 
       if (!response.ok) {
         setError(data.msg || `An error occurred during ${mode}.`);
@@ -145,7 +155,14 @@ function AuthFormContent({ initialMode = 'login' }: AuthFormProps) {
       }
     } catch (err) {
       console.error(`[AuthForm] handleSubmit CATCH block during ${mode}. Error message:`, (err instanceof Error ? err.message : String(err)), 'Full error object:', err);
-      setError(`An unexpected error occurred. Please try again.`);
+      
+      if ((err as Error).name === 'AbortError') {
+        setError('Request timed out. Please check your connection and try again.');
+      } else if ((err as Error).message === 'Failed to fetch') {
+        setError('Unable to connect to server. Please ensure the backend is running.');
+      } else {
+        setError(`An unexpected error occurred. Please try again.`);
+      }
     } finally {
       setIsLoading(false);
     }

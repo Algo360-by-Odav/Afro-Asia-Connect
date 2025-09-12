@@ -12,9 +12,8 @@ import {
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { LineChart, PieChart } from 'react-native-chart-kit';
-import { RootState } from '../store';
-import { useGetAnalyticsQuery, useGetBookingsQuery } from '../store/api';
+import { RootState } from './src/store';
+import { colors } from './src/theme';
 
 interface DashboardScreenProps {
   navigation: any;
@@ -29,12 +28,38 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
   const user = useSelector((state: RootState) => state.auth.user);
   const isProvider = user?.role === 'SERVICE_PROVIDER';
 
-  // API Queries
-  const { data: analytics, refetch: refetchAnalytics } = useGetAnalyticsQuery(
-    { days: selectedPeriod },
-    { skip: !isProvider }
-  );
-  const { data: bookings, refetch: refetchBookings } = useGetBookingsQuery();
+  // Mock data for now
+  const analytics = {
+    totalRevenue: 15420,
+    totalBookings: 87,
+    completionRate: 94.5,
+    averageRating: 4.8,
+    overview: {
+      totalBookings: 87,
+      totalRevenue: 15420,
+      customerSatisfaction: 4.8
+    },
+    bookings: {
+      completedBookings: 80,
+      pendingBookings: 5,
+      completionRate: 94.5
+    }
+  };
+  
+  const bookings = [
+    { id: '1', customerName: 'John Doe', serviceName: 'Web Development', date: '2024-01-15', time: '10:00 AM', status: 'COMPLETED', provider: { firstName: 'John', lastName: 'Doe' } },
+    { id: '2', customerName: 'Jane Smith', serviceName: 'Graphic Design', date: '2024-01-16', time: '11:00 AM', status: 'PENDING', provider: { firstName: 'Jane', lastName: 'Smith' } },
+    { id: '3', customerName: 'Mike Johnson', serviceName: 'SEO Consulting', date: '2024-01-17', time: '12:00 PM', status: 'CANCELLED', provider: { firstName: 'Mike', lastName: 'Johnson' } }
+  ];
+
+  // Mock refetch functions
+  const refetchAnalytics = async () => {
+    console.log('Refreshing analytics...');
+  };
+  
+  const refetchBookings = async () => {
+    console.log('Refreshing bookings...');
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -131,30 +156,18 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
 
       {/* Revenue Chart */}
       <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>Revenue Trend (Last 7 Days)</Text>
-        <LineChart
-          data={revenueData}
-          width={screenWidth - 40}
-          height={200}
-          chartConfig={chartConfig}
-          bezier
-          style={styles.chart}
-        />
+        <View style={styles.chartPlaceholder}>
+          <Text style={styles.chartTitleText}>Revenue Trend</Text>
+          <Text style={styles.chartSubtitle}>Chart visualization coming soon</Text>
+        </View>
       </View>
 
       {/* Booking Status Chart */}
       <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>Booking Status Distribution</Text>
-        <PieChart
-          data={bookingStatusData}
-          width={screenWidth - 40}
-          height={200}
-          chartConfig={chartConfig}
-          accessor="population"
-          backgroundColor="transparent"
-          paddingLeft="15"
-          style={styles.chart}
-        />
+        <View style={styles.chartPlaceholder}>
+          <Text style={styles.chartTitleText}>Booking Status</Text>
+          <Text style={styles.chartSubtitle}>Chart visualization coming soon</Text>
+        </View>
       </View>
     </>
   );
@@ -164,7 +177,7 @@ const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) => {
       {/* Recent Bookings */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Recent Bookings</Text>
-        {bookings?.slice(0, 3).map((booking) => (
+        {bookings?.slice(0, 3).map((booking: any) => (
           <TouchableOpacity
             key={booking.id}
             style={styles.bookingCard}
@@ -538,6 +551,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     marginTop: 8,
+  },
+  chartPlaceholder: {
+    backgroundColor: '#f8f9fa',
+    padding: 40,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 10,
+  },
+  chartTitleText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  chartSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
   },
 });
 

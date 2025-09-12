@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useLoginMutation } from '../store/api';
-import { setCredentials, setLoading } from '../store/authSlice';
+import { colors } from './src/theme';
+import { apiService } from './src/services/apiService';
 
 interface LoginScreenProps {
   navigation: any;
@@ -28,42 +28,31 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const dispatch = useDispatch();
-  const [login] = useLoginMutation();
 
   const handleLogin = async () => {
+    const dispatch = useDispatch();
+
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    if (!email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return;
-    }
-
     try {
       setIsLoading(true);
-      dispatch(setLoading(true));
-
-      const result = await login({ email, password }).unwrap();
       
-      dispatch(setCredentials({
-        user: result.user,
-        token: result.token,
-      }));
-
-      // Navigation will be handled automatically by the navigation container
-      // based on the authentication state
+      const result = await apiService.login({ email, password });
       
+      if (result.success) {
+        Alert.alert('Success', 'Login successful!');
+        navigation.navigate('Main');
+      } else {
+        Alert.alert('Login Failed', result.error || 'Login failed');
+      }
     } catch (error: any) {
       console.error('Login error:', error);
-      Alert.alert(
-        'Login Failed',
-        error.data?.message || 'Invalid email or password. Please try again.'
-      );
+      Alert.alert('Login Failed', 'An error occurred during login');
     } finally {
       setIsLoading(false);
-      dispatch(setLoading(false));
     }
   };
 
