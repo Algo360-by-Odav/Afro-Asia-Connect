@@ -1,5 +1,6 @@
 [build]
-  publish = "out"
+  # Use standard Next.js build output directory
+  publish = ".next"
   command = "npm run build"
 
 [build.environment]
