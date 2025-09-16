@@ -3,6 +3,9 @@
   publish = ".next"
   command = "npm run build"
 
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 [build.environment]
   NODE_VERSION = "20"
   NPM_VERSION = "10"
@@ -16,13 +19,6 @@
 [context.deploy-preview.environment]
   NODE_ENV = "development"
   NEXT_PUBLIC_API_URL = "https://afroasiaconnect-api-preview.netlify.app"
-
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
 
 [[headers]]
   for = "/*"
