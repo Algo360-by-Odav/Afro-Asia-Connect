@@ -264,7 +264,7 @@ NEXT_PUBLIC_API_URL="http://localhost:3001"
 
 # Authentication
 NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-nextauth-secret"
+NEXTAUTH_SECRET="your-nextauth-secret-here"
 
 # Stripe (Optional)
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."

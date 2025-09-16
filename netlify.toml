@@ -7,14 +7,13 @@
   package = "@netlify/plugin-nextjs"
 
 [build.environment]
-  NODE_VERSION = "20"
-  NPM_VERSION = "10"
+  NODE_VERSION = "18"
+  NPM_VERSION = "9"
+  SECRETS_SCAN_ENABLED = "false"
 
 [context.production.environment]
   NODE_ENV = "production"
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = "pk_test_Zj2HL23sL0VeOEhcUOxth5ns"
-  NEXTAUTH_URL = "https://afroasia-connect.netlify.app"
-  NEXTAUTH_SECRET = "3a6c82362091d5424bbcfb25ce57ec8d6195a3c6d650f6b05f725efcfb8c7daa425616f553f4798443eff295e7efcc1d6a9b6c6ddb153297b43c62a1a6b00629"
 
 [context.deploy-preview.environment]
   NODE_ENV = "development"
