@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { neon } from '@netlify/neon';
+import { supabaseAdmin } from '@/lib/supabase';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-
-const sql = neon(); // Uses NETLIFY_DATABASE_URL automatically
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,13 +16,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user by email
-    const [user] = await sql`
-      SELECT id, email, password_hash, user_type, is_admin, created_at
-      FROM users 
-      WHERE email = ${email}
-    `;
+    const { data: user, error } = await supabaseAdmin
+      .from('users')
+      .select('id, email, password_hash, full_name, phone_number, role, created_at')
+      .eq('email', email)
+      .single();
 
-    if (!user) {
+    if (error || !user) {
       return NextResponse.json(
         { success: false, msg: 'Invalid email or password' },
         { status: 401 }
@@ -46,8 +44,9 @@ export async function POST(request: NextRequest) {
       {
         userId: user.id,
         email: user.email,
-        user_type: user.user_type,
-        isAdmin: user.is_admin || false
+        full_name: user.full_name,
+        role: user.role,
+        isAdmin: user.role === 'admin'
       },
       jwtSecret,
       { expiresIn: '24h' }
@@ -62,8 +61,10 @@ export async function POST(request: NextRequest) {
         user: {
           id: user.id,
           email: user.email,
-          user_type: user.user_type,
-          isAdmin: user.is_admin || false,
+          full_name: user.full_name,
+          phone_number: user.phone_number,
+          role: user.role,
+          isAdmin: user.role === 'admin',
           created_at: user.created_at
         }
       }

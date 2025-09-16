@@ -81,7 +81,7 @@ function AuthFormContent({ initialMode = 'login' }: AuthFormProps) {
     const endpoint = mode === 'login' ? `${API_BASE_URL}/auth/login` : `${API_BASE_URL}/auth/register`;
     const body = mode === 'login' ? 
       { email: formData.email, password: formData.password } : 
-      { email: formData.email, password: formData.password, user_type: formData.accountType, /* Add other registration fields like first_name, last_name if your backend expects them */ };
+      { email: formData.email, password: formData.password, full_name: formData.email.split('@')[0], phone_number: formData.phone || null };
 
     try {
       console.log('[AuthForm] handleSubmit: Attempting to login with email:', formData.email);

@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { neon } from '@netlify/neon';
+import { supabaseAdmin } from '@/lib/supabase';
 import bcrypt from 'bcrypt';
-
-const sql = neon(); // Uses NETLIFY_DATABASE_URL automatically
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, user_type } = await request.json();
+    const { email, password, full_name, phone_number } = await request.json();
 
     // Validate required fields
-    if (!email || !password || !user_type) {
+    if (!email || !password || !full_name) {
       return NextResponse.json(
-        { success: false, msg: 'Email, password, and user_type are required' },
+        { success: false, msg: 'Email, password, and full_name are required' },
         { status: 400 }
       );
     }
@@ -33,21 +31,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate user_type
-    const validUserTypes = ['buyer', 'seller', 'service_provider'];
-    if (!validUserTypes.includes(user_type)) {
-      return NextResponse.json(
-        { success: false, msg: 'Invalid user_type. Must be buyer, seller, or service_provider' },
-        { status: 400 }
-      );
-    }
-
     // Check if user already exists
-    const existingUser = await sql`
-      SELECT id FROM users WHERE email = ${email}
-    `;
+    const { data: existingUser } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
 
-    if (existingUser.length > 0) {
+    if (existingUser) {
       return NextResponse.json(
         { success: false, msg: 'User with this email already exists' },
         { status: 409 }
@@ -59,11 +50,25 @@ export async function POST(request: NextRequest) {
     const password_hash = await bcrypt.hash(password, saltRounds);
 
     // Insert new user
-    const [newUser] = await sql`
-      INSERT INTO users (email, password_hash, user_type, created_at, updated_at)
-      VALUES (${email}, ${password_hash}, ${user_type}, NOW(), NOW())
-      RETURNING id, email, user_type, created_at
-    `;
+    const { data: newUser, error } = await supabaseAdmin
+      .from('users')
+      .insert({
+        email,
+        password_hash,
+        full_name,
+        phone_number,
+        role: 'member'
+      })
+      .select('id, email, full_name, phone_number, role, created_at')
+      .single();
+
+    if (error) {
+      console.error('Supabase insert error:', error);
+      return NextResponse.json(
+        { success: false, msg: 'Failed to create user' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -72,7 +77,9 @@ export async function POST(request: NextRequest) {
         user: {
           id: newUser.id,
           email: newUser.email,
-          user_type: newUser.user_type,
+          full_name: newUser.full_name,
+          phone_number: newUser.phone_number,
+          role: newUser.role,
           created_at: newUser.created_at
         }
       }
@@ -80,15 +87,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Registration error:', error);
-    
-    // Handle database constraint errors
-    if (error instanceof Error && error.message.includes('duplicate key')) {
-      return NextResponse.json(
-        { success: false, msg: 'User with this email already exists' },
-        { status: 409 }
-      );
-    }
-
     return NextResponse.json(
       { success: false, msg: 'Internal server error during registration' },
       { status: 500 }

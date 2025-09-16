@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { neon } from '@netlify/neon';
-
-const sql = neon(); // Uses NETLIFY_DATABASE_URL automatically
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,43 +18,51 @@ export async function GET(request: NextRequest) {
     dateThreshold.setDate(dateThreshold.getDate() - days);
 
     // Get total users
-    const [totalUsersResult] = await sql`
-      SELECT COUNT(*) as total_users FROM users
-    `;
+    const { count: totalUsers } = await supabaseAdmin
+      .from('users')
+      .select('*', { count: 'exact', head: true });
 
     // Get new users in the specified period
-    const [newUsersResult] = await sql`
-      SELECT COUNT(*) as new_users 
-      FROM users 
-      WHERE created_at >= ${dateThreshold.toISOString()}
-    `;
+    const { count: newUsers } = await supabaseAdmin
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', dateThreshold.toISOString());
 
-    // Get total bookings (assuming you have a bookings table)
-    const [totalBookingsResult] = await sql`
-      SELECT COUNT(*) as total_bookings 
-      FROM bookings
-    `.catch(() => [{ total_bookings: 0 }]); // Fallback if table doesn't exist
+    // Get total companies
+    const { count: totalCompanies } = await supabaseAdmin
+      .from('companies')
+      .select('*', { count: 'exact', head: true });
 
-    // Get revenue data (assuming you have transactions/payments table)
-    const [revenueResult] = await sql`
-      SELECT 
-        COALESCE(SUM(amount), 0) as total_revenue,
-        COUNT(*) as total_transactions
-      FROM transactions 
-      WHERE status = 'completed'
-    `.catch(() => [{ total_revenue: 0, total_transactions: 0 }]); // Fallback if table doesn't exist
+    // Get total trade listings
+    const { count: totalListings } = await supabaseAdmin
+      .from('trade_listings')
+      .select('*', { count: 'exact', head: true });
+
+    // Get active trade listings
+    const { count: activeListings } = await supabaseAdmin
+      .from('trade_listings')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active');
+
+    // Get total trade requests
+    const { count: totalRequests } = await supabaseAdmin
+      .from('trade_requests')
+      .select('*', { count: 'exact', head: true });
 
     const analyticsData = {
       users: {
-        totalUsers: parseInt(totalUsersResult.total_users),
-        newUsers: parseInt(newUsersResult.new_users)
+        totalUsers: totalUsers || 0,
+        newUsers: newUsers || 0
       },
-      bookings: {
-        totalBookings: parseInt(totalBookingsResult.total_bookings)
+      companies: {
+        totalCompanies: totalCompanies || 0
       },
-      revenue: {
-        totalRevenue: parseFloat(revenueResult.total_revenue) || 0,
-        totalTransactions: parseInt(revenueResult.total_transactions)
+      listings: {
+        totalListings: totalListings || 0,
+        activeListings: activeListings || 0
+      },
+      requests: {
+        totalRequests: totalRequests || 0
       }
     };
 
