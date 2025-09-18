@@ -21,6 +21,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
+    console.log('Attempting to update user role for userId:', userId, 'to role:', role);
+    
     // Update user role in database
     const { data, error } = await supabaseAdmin
       .from('users')
@@ -30,9 +32,15 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error updating user role:', error);
-      return NextResponse.json({ error: 'Failed to update role' }, { status: 500 });
+      console.error('Supabase error updating user role:', error);
+      return NextResponse.json({ 
+        error: 'Failed to update role', 
+        details: error.message,
+        code: error.code 
+      }, { status: 500 });
     }
+
+    console.log('Successfully updated user role:', data);
 
     return NextResponse.json({ 
       success: true, 
@@ -42,6 +50,15 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     console.error('Error in update-role:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    
+    // Check if it's a JWT error
+    if (error instanceof jwt.JsonWebTokenError) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+    
+    return NextResponse.json({ 
+      error: 'Internal server error', 
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
