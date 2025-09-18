@@ -8,7 +8,7 @@ interface SearchPageProps {
 }
 
 async function getResults(query: string) {
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3001";
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
   const [companiesRes, productsRes] = await Promise.all([
     fetch(`${API_BASE}/api/companies?q=${encodeURIComponent(query)}`),
     fetch(`${API_BASE}/api/products?q=${encodeURIComponent(query)}`),
@@ -25,7 +25,9 @@ async function getResults(query: string) {
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const resolvedSearchParams = await searchParams;
-  const query = resolvedSearchParams.query || "";
+  const query = Array.isArray(resolvedSearchParams.query) 
+    ? resolvedSearchParams.query[0] || "" 
+    : resolvedSearchParams.query || "";
   const { companies, products } = await getResults(query);
 
   return (

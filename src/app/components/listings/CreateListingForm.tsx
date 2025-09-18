@@ -1,23 +1,4 @@
-    /*
-Server is running on http://localhost:3001
-
-      at Server.log (server.js:18:11)
-
-  console.log
-    Successfully connected to the database. Current time from DB: 2025-07-13T11:36:18.166Z
-
-      at log (config/db.js:18:13)
-
- FAIL  routes/listings.test.js
-  Listings API
-    GET /api/listings                                                                                                      
-      × should get all listings (91 ms)                                                                                    
-      × should return 500 if database error occurs (15 ms)                                                                 
-    GET /api/listings/:id                                                                                                  
-      × should get a single listing (10 ms)                                                                                
-      × should return 404 if listing not found (8 ms)                                                                      
-      × should return 500 if database error occurs (8 ms)                                                                  
-    POST /api/listings                                                                                                     
+/*                                                                                                     
       × should create a new listing (32 ms)                                                                                
       × should return 401 if user is not authenticated (69 ms)                                                             
       × should return 500 if database error occurs (10 ms)                                                                 
@@ -524,7 +505,12 @@ const CreateListingForm: React.FC = () => {
       {/* Logo Image Upload */}
       <div>
         <label className={labelClass}>Logo Image</label>
-        <input type="file" accept="image/*" onChange={(e) => {
+        <input 
+          type="file" 
+          accept="image/*" 
+          aria-label="Upload logo image"
+          title="Upload logo image for your listing"
+          onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) {
             setFormData(prev => ({ ...prev, logo_image_file: file }));
