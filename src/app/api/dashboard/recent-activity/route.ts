@@ -9,15 +9,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
     }
 
-    // For now, return empty activities array
-    // TODO: Implement proper activity fetching with user authentication
+    // For now, return empty activities 
+    // TODO: Implement real recent activity fetching from Supabase
+    // For now, return empty array
     const activities: any[] = [];
-
+    
     return NextResponse.json({ 
-      activities,
-      total: 0
+      success: true, 
+      data: activities 
     });
-
   } catch (error) {
     console.error('Error fetching recent activities:', error);
     return NextResponse.json(

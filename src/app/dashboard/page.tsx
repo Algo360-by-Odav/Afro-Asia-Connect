@@ -96,7 +96,7 @@ export default function DashboardPage() {
         });
         if (!response.ok) throw new Error('Failed to fetch notifications');
         const result = await response.json();
-        setNotifications(result.data.map((n: any) => ({ 
+        setNotifications((result.data || []).map((n: any) => ({ 
           id: n.id, 
           message: n.message || n.title, 
           type: n.type, 
@@ -132,7 +132,7 @@ export default function DashboardPage() {
         }
         
         const result = await response.json();
-        setRecentActivities(result.data.map((a: any) => ({
+        setRecentActivities((result.data || []).map((a: any) => ({
           id: a.id,
           type: a.type,
           text: a.text,

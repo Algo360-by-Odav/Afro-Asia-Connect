@@ -9,16 +9,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
     }
 
-    // For now, return empty notifications array
-    // TODO: Implement proper notification fetching with user authentication
+    // TODO: Implement real notification fetching from Supabase
+    // For now, return empty array
     const notifications: any[] = [];
-
+    
     return NextResponse.json({ 
-      notifications,
-      unreadCount: 0,
-      total: 0
+      success: true, 
+      data: notifications 
     });
-
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return NextResponse.json(
