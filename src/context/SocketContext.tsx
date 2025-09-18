@@ -81,7 +81,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) return;
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || window.location.origin;
     console.log('[Socket] Attempting to connect to:', apiUrl);
     
     const newSocket = io(apiUrl, {
@@ -91,7 +91,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     });
 
     newSocket.on('connect', () => {
-      console.log('[Socket] Connected successfully to', process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001');
+      console.log('[Socket] Connected successfully to', apiUrl);
       setIsConnected(true);
       
       if (user?.id) {
@@ -330,7 +330,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/messaging/conversations`, {
+      const response = await fetch(`/api/messaging/conversations`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -365,7 +365,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     const loadMessages = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/messaging/conversations/${activeConversation.id}/messages`, {
+        const response = await fetch(`/api/messaging/conversations/${activeConversation.id}/messages`, {
           credentials: 'include',
         });
         const data = await response.json();
@@ -441,14 +441,14 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       tokenLength: token?.length,
       tokenStart: token?.substring(0, 20) + '...',
       user: user ? { id: user.id, email: user.email } : 'No user',
-      apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+      apiUrl: '/api'
     });
     
     if (!token) {
       throw new Error('No authentication token found. Please log in.');
     }
     
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/messaging/conversations`, {
+    const response = await fetch(`/api/messaging/conversations`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
