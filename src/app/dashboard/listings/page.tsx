@@ -152,37 +152,69 @@ export default function ManageListingsPage() {
   const isSellerRole = userRole === 'seller' || userRole === 'SUPPLIER' || userRole === 'supplier';
   console.log('DEBUG render - user object:', JSON.stringify(user, null, 2));
   console.log('DEBUG render - userRole:', userRole);
-  console.log('DEBUG render - isSellerRole:', isSellerRole);
-  if (user && !isSellerRole) {
+  if (!user || authLoading) {
+    return <div className="p-6 text-center">Loading...</div>;
+  }
+
+  if (!user || !isSellerRole || !token) {
     return (
       <div className="p-6 text-center">
         <h1 className="text-2xl font-semibold text-red-600">Access Denied</h1>
         <p className="mt-4 text-slate-600">You must be a seller to manage listings.</p>
         <p className="mt-2 text-sm text-gray-500">Current user role: {userRole}</p>
         <p className="mt-1 text-sm text-gray-500">User object: {JSON.stringify(user)}</p>
-        <button 
-          onClick={() => {
-            console.log('🔄 Refreshing user data...');
-            fetchUser();
-          }}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Refresh User Data
-        </button>
-        <button 
-          onClick={() => {
-            localStorage.removeItem('user');
-            localStorage.removeItem('token');
-            document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict';
-            window.location.reload();
-          }}
-          className="mt-4 ml-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-        >
-          Clear Cache & Reload
-        </button>
-        <Link href="/dashboard" className="mt-6 inline-block px-6 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700">
-          Go to Dashboard
-        </Link>
+        
+        <div className="mt-6 space-x-2">
+          <button 
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/auth/update-role', {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify({ role: 'seller' })
+                });
+                
+                if (response.ok) {
+                  await fetchUser(); // Refresh user data
+                  window.location.reload(); // Reload page to reflect changes
+                } else {
+                  alert('Failed to update role');
+                }
+              } catch (error) {
+                console.error('Error updating role:', error);
+                alert('Error updating role');
+              }
+            }}
+            className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+          >
+            Become a Seller
+          </button>
+          
+          <button 
+            onClick={fetchUser}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+          >
+            Refresh User Data
+          </button>
+          
+          <button 
+            onClick={() => {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              window.location.reload();
+            }}
+            className="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700"
+          >
+            Clear Cache & Reload
+          </button>
+          
+          <Link href="/dashboard" className="inline-block px-4 py-2 text-sm font-medium text-white bg-sky-600 rounded-md hover:bg-sky-700">
+            Go to Dashboard
+          </Link>
+        </div>
       </div>
     );
   }
