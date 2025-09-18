@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
     // For now, return empty conversations array
     // TODO: Implement proper conversation fetching with user authentication
-    const conversations = [];
+    const conversations: any[] = [];
 
     return NextResponse.json({ 
       conversations,

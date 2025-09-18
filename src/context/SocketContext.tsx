@@ -204,7 +204,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
           // Find sender info from conversations
           const conversation = conversations.find(c => c.id === message.conversationId);
           const sender = conversation?.participants?.find(p => p.id === message.senderId);
-          const senderName = sender?.firstName || sender?.lastName || 'Someone';
+          const senderName = sender?.firstName || sender?.name || 'Someone';
           
           // Show notification if page is not visible or chat is not active
           if (document.hidden || activeConversation?.id !== message.conversationId) {

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
     // For now, return empty notifications array
     // TODO: Implement proper notification fetching with user authentication
-    const notifications = [];
+    const notifications: any[] = [];
 
     return NextResponse.json({ 
       notifications,

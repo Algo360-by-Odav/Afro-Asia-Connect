@@ -63,7 +63,7 @@ export default function DashboardPage() {
       const fetchDashboardMetrics = async () => {
         try {
           setMetricsLoading(true);
-          const response = await fetch(`http://127.0.0.1:3001/api/dashboard/metrics`, { 
+          const response = await fetch(`/api/dashboard/metrics`, { 
             headers: { 'Authorization': `Bearer ${token}` } 
           });
           if (!response.ok) throw new Error('Failed to fetch dashboard metrics');
@@ -91,7 +91,7 @@ export default function DashboardPage() {
     const fetchNotifications = async () => {
       setNotificationsLoading(true);
       try {
-        const response = await fetch(`http://127.0.0.1:3001/api/dashboard/notifications`, { 
+        const response = await fetch(`/api/dashboard/notifications`, { 
           headers: { 'Authorization': `Bearer ${token}` } 
         });
         if (!response.ok) throw new Error('Failed to fetch notifications');
@@ -120,7 +120,7 @@ export default function DashboardPage() {
       setActivitiesLoading(true);
       try {
         console.log('Fetching recent activities with token:', token ? 'Present' : 'Missing');
-        const response = await fetch(`http://127.0.0.1:3001/api/dashboard/recent-activity`, { 
+        const response = await fetch(`/api/dashboard/recent-activity`, { 
           headers: { 'Authorization': `Bearer ${token}` } 
         });
         

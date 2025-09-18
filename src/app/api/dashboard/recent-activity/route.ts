@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
     // For now, return empty activities array
     // TODO: Implement proper activity fetching with user authentication
-    const activities = [];
+    const activities: any[] = [];
 
     return NextResponse.json({ 
       activities,
