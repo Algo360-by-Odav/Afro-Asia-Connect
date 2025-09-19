@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
 import { notificationService } from '@/utils/notifications';
 
@@ -61,7 +61,13 @@ export function SupabaseRealtimeProvider({ children }: { children: React.ReactNo
 
   // Initialize Supabase Realtime connection
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isSupabaseConfigured) {
+      if (!isSupabaseConfigured) {
+        console.warn('[Realtime] Supabase not configured, skipping realtime initialization');
+        setIsConnected(false);
+      }
+      return;
+    }
 
     console.log('[Realtime] Initializing Supabase Realtime for user:', user.id);
     setIsConnected(true);
@@ -196,7 +202,7 @@ export function SupabaseRealtimeProvider({ children }: { children: React.ReactNo
 
   // Load messages for active conversation
   useEffect(() => {
-    if (!activeConversation) {
+    if (!activeConversation || !isSupabaseConfigured) {
       setMessages([]);
       return;
     }
@@ -231,6 +237,11 @@ export function SupabaseRealtimeProvider({ children }: { children: React.ReactNo
   const sendMessage = async (conversationId: string, content: string) => {
     if (!user) {
       throw new Error('User not authenticated');
+    }
+
+    if (!isSupabaseConfigured) {
+      console.warn('[Realtime] Cannot send message - Supabase not configured');
+      return;
     }
 
     try {

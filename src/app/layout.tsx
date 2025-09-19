@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from './components/layout/Navbar'; // Import the Navbar
-import { AuthProvider } from '../context/AuthContext'; // Import AuthProvider
-import { SupabaseRealtimeProvider } from '@/context/SupabaseRealtimeContext';
+import { AuthProvider } from '../context/AuthContext';
+import { SupabaseRealtimeProvider } from '../context/SupabaseRealtimeContext';
+import { SupabaseStatus } from '../components/ui/SupabaseStatus';
 import FloatingChatButton from './components/messaging/FloatingChatButton';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -39,6 +40,7 @@ export default function RootLayout({
               <Navbar />
               <main>{children}</main>
               <FloatingChatButton />
+              <SupabaseStatus />
             </SupabaseRealtimeProvider>
             <ToastContainer
               position="top-right"
