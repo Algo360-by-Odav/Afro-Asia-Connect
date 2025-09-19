@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useSocket } from '@/context/SocketContext';
+import { useSupabaseRealtime } from '@/context/SupabaseRealtimeContext';
 import { useAuth } from '@/context/AuthContext';
 
 interface MessageButtonProps {
@@ -22,7 +22,7 @@ export default function MessageButton({
   children = "Send Message"
 }: MessageButtonProps) {
   const { user } = useAuth();
-  const { createConversation, setActiveConversation } = useSocket();
+  const { createConversation, setActiveConversation } = useSupabaseRealtime();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleStartConversation = async () => {

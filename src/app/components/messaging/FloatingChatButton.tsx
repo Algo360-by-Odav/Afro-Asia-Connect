@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSocket } from '@/context/SocketContext';
+import { useSupabaseRealtime } from '@/context/SupabaseRealtimeContext';
 import { useAuth } from '@/context/AuthContext';
 import ChatModal from './ChatModal';
 
 export default function FloatingChatButton() {
   const { user } = useAuth();
-  const { conversations, isConnected } = useSocket();
+  const { conversations, isConnected } = useSupabaseRealtime();
   const [isOpen, setIsOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  // Calculate total unread messages
-  const totalUnread = conversations.reduce((sum, conv) => sum + (conv._count?.messages || 0), 0);
+  // Calculate total unread messages (simplified for now)
+  const totalUnread = conversations.length;
 
   // Animate button when new messages arrive
   useEffect(() => {

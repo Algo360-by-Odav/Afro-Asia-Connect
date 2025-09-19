@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useSocket } from '@/context/SocketContext';
+import { useSupabaseRealtime } from '@/context/SupabaseRealtimeContext';
 import { useAuth } from '@/context/AuthContext';
 import { MessageSquare, Send, X, Minimize2, Users, Phone, Video } from 'lucide-react';
 
@@ -18,10 +18,9 @@ export default function ChatWidget({ className = '', defaultMinimized = true }: 
     messages, 
     isConnected, 
     sendMessage, 
-    isUserOnline,
     onlineUsers,
     setActiveConversation 
-  } = useSocket();
+  } = useSupabaseRealtime();
   
   const [isMinimized, setIsMinimized] = useState(defaultMinimized);
   const [newMessage, setNewMessage] = useState('');
@@ -40,7 +39,7 @@ export default function ChatWidget({ className = '', defaultMinimized = true }: 
     if (!newMessage.trim() || !activeConversation) return;
 
     try {
-      await sendMessage(activeConversation.id, newMessage.trim());
+      await sendMessage(newMessage.trim(), 'TEXT');
       setNewMessage('');
     } catch (error) {
       console.error('Failed to send message:', error);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useSocket } from '@/context/SocketContext';
+import { useSupabaseRealtime } from '@/context/SupabaseRealtimeContext';
 import { useAuth } from '@/context/AuthContext';
 import EmojiPicker from './EmojiPicker';
 import MessageSearch from './MessageSearch';
@@ -21,14 +21,10 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
     messages, 
     isConnected, 
     sendMessage, 
-    startTyping,
-    stopTyping,
-    typingUsers,
-    isUserOnline,
     onlineUsers,
     setActiveConversation,
     markAsRead 
-  } = useSocket();
+  } = useSupabaseRealtime();
   
   const [newMessage, setNewMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -57,12 +53,12 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
   }, [activeConversation, user]);
 
   const handleSendMessage = async () => {
-    if ((!newMessage.trim() && !selectedFile) || !activeConversation) return;
+    if (!newMessage.trim() && !selectedFile) return;
     
     if (selectedFile) {
       await handleFileUpload();
     } else if (activeConversation && activeConversation.id) {
-      sendMessage(activeConversation.id, newMessage);
+      await sendMessage(newMessage.trim(), 'TEXT');
       setNewMessage('');
     }
   };
@@ -74,7 +70,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
     const formData = new FormData();
     formData.append('file', selectedFile);
     formData.append('conversationId', activeConversation?.id?.toString() || '');
-    formData.append('senderId', user?.id?.toString() || '');
+    formData.append('sender_id', user?.id?.toString() || '');
     
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/message-files/upload`, {
@@ -115,14 +111,9 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
   };
 
   const handleTyping = () => {
-    if (!activeConversation) return;
-    
+    // Typing indicators disabled for simplified implementation
     if (typingTimeout) {
       clearTimeout(typingTimeout);
-    }
-    if (activeConversation && activeConversation.id) {
-      startTyping(activeConversation.id);
-      setTypingTimeout(setTimeout(() => stopTyping(activeConversation.id), 2000));
     }
   };
 
@@ -247,7 +238,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
             ) : (
               conversations.map((conversation) => {
                 const otherUser = getOtherParticipant(conversation);
-                const unreadCount = conversation._count?.messages || 0;
+                const unreadCount = 0; // Simplified for now
                 
                 return (
                   <div
@@ -265,20 +256,20 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                           </div>
                           {otherUser && (
                             <div className={`w-2 h-2 rounded-full ${
-                              isUserOnline(otherUser.id) ? 'bg-green-500' : 'bg-gray-400'
-                            }`} title={isUserOnline(otherUser.id) ? 'Online' : 'Offline'} />
+                              onlineUsers.has(otherUser.id) ? 'bg-green-500' : 'bg-gray-400'
+                            }`} title={onlineUsers.has(otherUser.id) ? 'Online' : 'Offline'} />
                           )}
                         </div>
-                        {conversation.lastMessage && (
+                        {conversation.last_message && (
                           <div className="text-xs text-blue-200 truncate">
-                            {conversation.lastMessage.content}
+                            {conversation.last_message.content}
                           </div>
                         )}
                       </div>
                       <div className="flex flex-col items-end space-y-1">
-                        {conversation.lastMessage && (
+                        {conversation.last_message && (
                           <div className="text-xs text-blue-200">
-                            {formatTime(conversation.lastMessage.createdAt)}
+                            {formatTime(conversation.last_message.created_at)}
                           </div>
                         )}
                         {unreadCount > 0 && (
@@ -328,7 +319,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
             ) : (
               conversations.map((conversation) => {
                 const otherUser = getOtherParticipant(conversation);
-                const unreadCount = conversation._count?.messages || 0;
+                const unreadCount = 0; // Simplified for now
                 
                 return (
                   <div
@@ -346,12 +337,12 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                             {otherUser?.firstName || otherUser?.lastName || 'Unknown User'}
                           </div>
                           {otherUser && (
-                            <div className={`w-2 h-2 rounded-full ${isUserOnline(otherUser.id) ? 'bg-green-500' : 'bg-gray-400'}`} />
+                            <div className={`w-2 h-2 rounded-full ${onlineUsers.has(otherUser.id) ? 'bg-green-500' : 'bg-gray-400'}`} />
                           )}
                         </div>
-                        {conversation.lastMessage && (
+                        {conversation.last_message && (
                           <div className="text-xs text-blue-200 truncate">
-                            {conversation.lastMessage.content}
+                            {conversation.last_message.content}
                           </div>
                         )}
                       </div>
@@ -383,13 +374,13 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
                     </div>
                     <div className="flex items-center space-x-2 text-sm text-gray-500">
                       <div className={`w-2 h-2 rounded-full ${
-                        getOtherParticipant(activeConversation) && isUserOnline(getOtherParticipant(activeConversation).id) 
+                        getOtherParticipant(activeConversation) && onlineUsers.has(getOtherParticipant(activeConversation).id) 
                           ? 'bg-green-500' : 'bg-gray-400'
                       }`} />
                       <span>
                         {(() => {
                           const otherParticipant = getOtherParticipant(activeConversation);
-                          const isOnline = otherParticipant && isUserOnline(otherParticipant.id);
+                          const isOnline = otherParticipant && onlineUsers.has(otherParticipant.id);
                           console.log('[ChatModal] Other participant:', otherParticipant?.id, 'Is online:', isOnline);
                           console.log('[ChatModal] Online users:', Array.from(onlineUsers || new Set()));
                           return isOnline ? 'Online' : 'Offline';
@@ -403,49 +394,44 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-4">
                 {messages.map((message) => {
-                  const isOwnMessage = message.senderId === Number(user?.id);
+                  const isOwnMessage = String(message.sender_id) === String(user?.id);
                   
                   return (
                     <div
                       key={message.id}
-                      className={`flex ${Number(message.senderId) === Number(user?.id) ? 'justify-end' : 'justify-start'} mb-2`}
+                      className={`flex ${String(message.sender_id) === String(user?.id) ? 'justify-end' : 'justify-start'} mb-2`}
                     >
                       <div
                         className={`max-w-[250px] sm:max-w-xs lg:max-w-md px-2 sm:px-3 py-2 rounded-lg text-sm sm:text-base ${
-                          Number(message.senderId) === Number(user?.id)
+                          String(message.sender_id) === String(user?.id)
                             ? 'bg-blue-900 text-white'
                             : 'bg-gray-200 text-gray-800'
                         }`}
                       >
-                        {message.messageType === 'FILE' && message.fileUrl ? (
+                        {message.message_type === 'FILE' && message.file_url ? (
                           <div className="mb-2">
                             <div className="flex items-center space-x-2 p-2 bg-white bg-opacity-20 rounded">
                               <span className="text-lg">📎</span>
                               <a
-                                href={`${process.env.NEXT_PUBLIC_API_URL}${message.fileUrl}`}
+                                href={`${process.env.NEXT_PUBLIC_API_URL}${message.file_url}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-sm underline hover:no-underline"
                               >
-                                {message.fileName || 'Download File'}
+                                {message.file_name || 'Download File'}
                               </a>
                             </div>
                           </div>
                         ) : null}
                         <div className="text-sm">{message.content}</div>
                         <div className="text-xs opacity-70 mt-1">
-                          {formatTime(message.createdAt)}
+                          {formatTime(message.created_at)}
                         </div>
                       </div>
                     </div>
                   );
                 })}
-                {/* Typing Indicator */}
-                {Object.keys(typingUsers).length > 0 && (
-                  <div className="px-4 py-2 text-sm text-gray-500 italic">
-                    {Object.values(typingUsers).join(', ')} {Object.keys(typingUsers).length === 1 ? 'is' : 'are'} typing...
-                  </div>
-                )}
+                {/* Typing Indicator - Disabled for now */}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -567,7 +553,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
         isOpen={showSearch}
         onClose={() => setShowSearch(false)}
         onSelectMessage={(conversationId) => {
-          const conversation = conversations.find(c => c.id === conversationId);
+          const conversation = conversations.find(c => String(c.id) === String(conversationId));
           if (conversation) {
             setActiveConversation(conversation);
           }
@@ -585,7 +571,7 @@ export default function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClos
       <MessageScheduler
         isOpen={showScheduler}
         onClose={() => setShowScheduler(false)}
-        conversationId={activeConversation?.id}
+        conversationId={activeConversation?.id ? Number(activeConversation.id) : undefined}
         onScheduleMessage={(content, scheduledFor) => {
           console.log('Message scheduled:', { content, scheduledFor });
           // Optionally show a success message
