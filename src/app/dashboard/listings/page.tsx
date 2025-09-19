@@ -56,7 +56,7 @@ export default function ManageListingsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/listings/my-listings?page=${page}&limit=10`, {
+      const response = await fetch(`/api/listings/my-listings?page=${page}&limit=10`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) {
@@ -108,7 +108,7 @@ export default function ManageListingsPage() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/listings/${listingId}`, {
+      const response = await fetch(`/api/listings/${listingId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -125,7 +125,7 @@ export default function ManageListingsPage() {
   const toggleListingStatus = async (listing: Listing) => {
     if (!token) return;
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/listings/${listing.id}`, {
+      const response = await fetch(`/api/listings/${listing.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

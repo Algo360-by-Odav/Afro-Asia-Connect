@@ -141,7 +141,7 @@ export default function ListingDetailClient() {
           <div className="md:flex-shrink-0 md:w-1/2 bg-gray-100 flex items-center justify-center p-6">
             <img 
               className="h-64 w-auto object-contain rounded-lg shadow-md"
-              src={listing.logoImageUrl?.startsWith('/uploads/') ? `http://127.0.0.1:3001${listing.logoImageUrl}` : listing.logoImageUrl || defaultLogo} 
+              src={listing.logoImageUrl || defaultLogo} 
               alt={`${listing.businessName} logo`} 
               onError={(e) => { (e.target as HTMLImageElement).src = defaultLogo; }}
             />
@@ -238,7 +238,7 @@ export default function ListingDetailClient() {
               {listing.galleryImageUrls.filter(url => url && url.trim() !== '').map((url, index) => (
                 <div key={index} className="aspect-w-1 aspect-h-1 rounded-lg overflow-hidden shadow-md">
                   <img 
-                    src={`http://127.0.0.1:3001${url}`} 
+                    src={url} 
                     alt={`Gallery image ${index + 1}`} 
                     className="object-cover w-full h-full" 
                     onError={(e) => { 

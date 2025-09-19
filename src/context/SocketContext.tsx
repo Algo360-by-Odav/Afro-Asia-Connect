@@ -81,6 +81,13 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) return;
 
+    // Disable WebSocket for Netlify deployment (no WebSocket server available)
+    if (typeof window !== 'undefined' && window.location.hostname.includes('netlify.app')) {
+      console.log('[Socket] WebSocket disabled for Netlify deployment');
+      setIsConnected(false);
+      return;
+    }
+
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || window.location.origin;
     console.log('[Socket] Attempting to connect to:', apiUrl);
     

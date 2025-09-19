@@ -207,8 +207,8 @@ USING (EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 
 CREATE OR REPLACE FUNCTION handle_new_auth_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO users (id, full_name, email, role, created_at)
-  VALUES (NEW.id, NEW.raw_user_meta_data->>'full_name', NEW.email, 'member', now())
+  INSERT INTO users (id, full_name, email, role, user_type, created_at)
+  VALUES (NEW.id, NEW.raw_user_meta_data->>'full_name', NEW.email, 'member', 'member', now())
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
 END;

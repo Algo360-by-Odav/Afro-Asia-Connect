@@ -60,7 +60,7 @@ export default function EditListingClient() {
         setLoading(true);
         setError(null);
         try {
-          const response = await fetch(`http://127.0.0.1:3001/api/listings/${id}`, {
+          const response = await fetch(`/api/listings/${id}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
             },
@@ -152,7 +152,7 @@ export default function EditListingClient() {
         const formData = new FormData();
         formData.append('logo', logoFile);
         
-        const uploadResponse = await fetch('http://127.0.0.1:3001/api/upload/logo', {
+        const uploadResponse = await fetch('/api/upload/logo', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -176,7 +176,7 @@ export default function EditListingClient() {
           const galleryFormData = new FormData();
           galleryFormData.append('file', file);
           
-          const uploadResponse = await fetch('http://127.0.0.1:3001/api/upload', {
+          const uploadResponse = await fetch('/api/upload', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -199,7 +199,7 @@ export default function EditListingClient() {
       // Remove file objects before sending to API
       const { gallery_image_files, ...submitData } = updatedListing;
 
-      const response = await fetch(`http://127.0.0.1:3001/api/listings/${id}`, {
+      const response = await fetch(`/api/listings/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -269,6 +269,7 @@ export default function EditListingClient() {
           <input 
             type="file" 
             accept="image/*" 
+            title="Upload logo image for your listing"
             onChange={handleLogoChange}
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
           />
@@ -316,6 +317,7 @@ export default function EditListingClient() {
             type="file"
             accept="image/*"
             multiple
+            title="Upload gallery images for your listing"
             onChange={handleGalleryUpload}
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
           />

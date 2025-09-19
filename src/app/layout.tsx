@@ -3,7 +3,7 @@ import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from './components/layout/Navbar'; // Import the Navbar
 import { AuthProvider } from '../context/AuthContext'; // Import AuthProvider
-import { SocketProvider } from '@/context/SocketContext';
+import { SupabaseRealtimeProvider } from '@/context/SupabaseRealtimeContext';
 import FloatingChatButton from './components/messaging/FloatingChatButton';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -35,11 +35,11 @@ export default function RootLayout({
       <body className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}>
         <ClientWrapper>
           <AuthProvider>
-            <SocketProvider>
+            <SupabaseRealtimeProvider>
               <Navbar />
               <main>{children}</main>
               <FloatingChatButton />
-            </SocketProvider>
+            </SupabaseRealtimeProvider>
             <ToastContainer
               position="top-right"
               autoClose={5000}

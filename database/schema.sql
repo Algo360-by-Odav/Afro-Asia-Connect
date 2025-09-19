@@ -10,7 +10,8 @@ CREATE TABLE users (
     email TEXT UNIQUE NOT NULL,
     phone_number TEXT,
     password_hash TEXT, -- handled by Supabase Auth
-    role TEXT CHECK (role IN ('admin','member')) DEFAULT 'member',
+    role TEXT CHECK (role IN ('admin','member','seller','supplier','service_provider')) DEFAULT 'member',
+    user_type TEXT CHECK (user_type IN ('admin','member','seller','supplier','service_provider')) DEFAULT 'member',
     created_at TIMESTAMP DEFAULT now()
 );
 

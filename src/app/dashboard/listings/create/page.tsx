@@ -107,7 +107,7 @@ export default function CreateListingPage() {
           const galleryFormData = new FormData();
           galleryFormData.append('file', file);
           
-          const uploadResponse = await fetch('http://127.0.0.1:3001/api/upload', {
+          const uploadResponse = await fetch('/api/upload', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -130,7 +130,7 @@ export default function CreateListingPage() {
       // Remove file objects before sending to API
       const { gallery_image_files, logo_image_file, ...submitData } = updatedFormData;
       
-      const response = await fetch('http://127.0.0.1:3001/api/listings', {
+      const response = await fetch('/api/listings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -332,6 +332,7 @@ export default function CreateListingPage() {
             type="file"
             accept="image/*"
             multiple
+            title="Upload gallery images for your listing"
             onChange={handleGalleryUpload}
             className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
           />

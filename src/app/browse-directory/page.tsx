@@ -36,7 +36,7 @@ export default function BrowseDirectoryPage() {
     setError(null);
     
     try {
-      const response = await fetch('http://127.0.0.1:3001/api/listings', {
+      const response = await fetch('/api/listings', {
         cache: 'no-store', // Prevent caching
         headers: {
           'Cache-Control': 'no-cache'
