@@ -61,3 +61,17 @@ next-env.d.ts
 
 # Local Netlify folder
 .netlify
+
+# Mobile app directories (not needed for web deployment)
+/AfroAsiaConnectMobile/
+/frontend/AfroAsiaConnectMobile/
+/frontend/backend/
+
+# Test directories
+/tests/
+/__mocks__/
+/frontend/__mocks__/
+
+# Build artifacts
+*.tsbuildinfo
+/backend/prisma/migrations/
