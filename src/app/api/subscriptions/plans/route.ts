@@ -2,59 +2,58 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    // Return basic subscription plans
+    // Return subscription plans in the format expected by the frontend
     const plans = [
       {
-        id: 'basic',
-        name: 'Basic',
-        price: 0,
+        id: 1,
+        name: 'Basic Connect',
+        price: '0.00',
         currency: 'USD',
-        interval: 'month',
+        duration_days: 30,
         features: [
-          'Basic profile',
-          'Limited listings',
-          'Standard support'
+          'Basic Company Profile',
+          'Limited Directory Access',
+          'Post up to 1 Request',
+          'Community Forum Access'
         ],
-        popular: false
+        description: 'Perfect for getting started'
       },
       {
-        id: 'professional',
-        name: 'Professional',
-        price: 29,
+        id: 2,
+        name: 'Premium Connect',
+        price: '49.00',
         currency: 'USD',
-        interval: 'month',
+        duration_days: 30,
         features: [
-          'Enhanced profile',
-          'Unlimited listings',
-          'Priority support',
-          'Analytics dashboard',
-          'Advanced messaging'
+          'Enhanced Company Profile',
+          'Full Directory Access',
+          'Post up to 10 Requests',
+          'Verified Badge',
+          'Priority Support',
+          'Access to Exclusive Events'
         ],
-        popular: true
+        description: 'Most popular choice for growing businesses'
       },
       {
-        id: 'enterprise',
-        name: 'Enterprise',
-        price: 99,
+        id: 3,
+        name: 'Business Pro',
+        price: '199.00',
         currency: 'USD',
-        interval: 'month',
+        duration_days: 30,
         features: [
-          'Premium profile',
-          'Unlimited everything',
-          '24/7 dedicated support',
-          'Advanced analytics',
-          'Custom integrations',
-          'White-label options'
+          'Premium Company Profile',
+          'API Access for Integrations',
+          'Unlimited Requests',
+          'Dedicated Account Manager',
+          'Custom Analytics & Reports',
+          'Early Access to New Features'
         ],
-        popular: false
+        description: 'Enterprise-grade features for large organizations'
       }
     ];
 
-    return NextResponse.json({
-      success: true,
-      plans,
-      total: plans.length
-    });
+    // Return the plans directly as an array, not wrapped in an object
+    return NextResponse.json(plans);
 
   } catch (error) {
     console.error('Error fetching subscription plans:', error);
