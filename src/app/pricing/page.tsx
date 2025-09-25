@@ -100,7 +100,7 @@ export default function PricingPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subscriptions/plans`);
+        const response = await fetch('/api/subscriptions/plans');
         if (!response.ok) {
           throw new Error(`Failed to fetch plans: ${response.statusText}`);
         }
@@ -182,7 +182,7 @@ export default function PricingPage() {
     setSubscribeError(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subscriptions/subscribe`, {
+      const response = await fetch('/api/subscriptions/subscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

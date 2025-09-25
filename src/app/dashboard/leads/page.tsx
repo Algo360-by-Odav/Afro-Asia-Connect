@@ -33,7 +33,7 @@ export default function ViewLeadsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/leads/my-leads`, {
+      const response = await fetch('/api/leads/my-leads', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) {
