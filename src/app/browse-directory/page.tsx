@@ -5,12 +5,20 @@ import Link from 'next/link';
 
 interface BusinessListing {
   id: string | number;
-  businessName: string;
-  businessCategory: string;
-  countryOfOrigin: string;
+  title?: string;
+  company?: string;
+  businessName?: string;
+  category?: string;
+  businessCategory?: string;
+  location?: string;
+  countryOfOrigin?: string;
   targetMarkets?: string[];
   logoImageUrl?: string;
-  // Add other relevant fields from your API response
+  image?: string;
+  description?: string;
+  verified?: boolean;
+  rating?: number;
+  reviews?: number;
 }
 
 const PREDEFINED_CATEGORIES = ['All', 'Electronics & Electrical Goods', 'Agriculture', 'Manufacturing', 'Technology', 'Services', 'Consulting', 'Real Estate']; // TODO: Populate dynamically
@@ -46,11 +54,13 @@ export default function BrowseDirectoryPage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      setAllListings(data);
-      setFilteredListings(data); // Initially, all listings are shown
+      // Handle both array response and object response with listings property
+      const listings = Array.isArray(data) ? data : (data.listings || []);
+      setAllListings(listings);
+      setFilteredListings(listings); // Initially, all listings are shown
       // Extract unique countries for the filter dropdown
       const countries = Array.from(
-        new Set(data.map((item: BusinessListing) => item.countryOfOrigin).filter(Boolean) as string[])
+        new Set(listings.map((item: BusinessListing) => item.countryOfOrigin || item.location).filter(Boolean) as string[])
       );
       setUniqueCountries(['All', ...countries.sort()]);
     } catch (e: any) {
@@ -71,23 +81,26 @@ export default function BrowseDirectoryPage() {
 
     // Filter by search term (business name)
     if (searchTerm) {
-      currentListings = currentListings.filter(listing =>
-        listing.businessName?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      currentListings = currentListings.filter(listing => {
+        const name = listing.businessName || listing.title || listing.company || '';
+        return name.toLowerCase().includes(searchTerm.toLowerCase());
+      });
     }
 
     // Filter by category
     if (selectedCategory && selectedCategory !== 'All') {
-      currentListings = currentListings.filter(listing =>
-        listing.businessCategory === selectedCategory
-      );
+      currentListings = currentListings.filter(listing => {
+        const category = listing.businessCategory || listing.category || '';
+        return category === selectedCategory;
+      });
     }
 
-        // Filter by Country of Origin
+    // Filter by Country of Origin
     if (selectedCountry && selectedCountry !== 'All') {
-      currentListings = currentListings.filter(listing =>
-        listing.countryOfOrigin === selectedCountry
-      );
+      currentListings = currentListings.filter(listing => {
+        const country = listing.countryOfOrigin || listing.location || '';
+        return country === selectedCountry;
+      });
     }
 
     // Filter by Target Market
@@ -212,15 +225,23 @@ export default function BrowseDirectoryPage() {
             {currentItems.map((listing: BusinessListing) => (
                   <div key={listing.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow flex flex-col">
                     <div className="w-full h-40 bg-gray-100 rounded-md mb-4 flex items-center justify-center overflow-hidden">
-                      {listing.logoImageUrl ? (
-                        <img src={listing.logoImageUrl} alt={`${listing.businessName} logo`} className="w-full h-full object-contain p-2" />
+                      {(listing.logoImageUrl || listing.image) ? (
+                        <img src={listing.logoImageUrl || listing.image} alt={`${listing.businessName || listing.title || listing.company} logo`} className="w-full h-full object-contain p-2" />
                       ) : (
                         <span className="text-gray-400 text-sm">No Logo Available</span>
                       )}
                     </div>
-                    <h3 className="text-xl font-semibold text-sky-700 mb-2 truncate" title={listing.businessName}>{listing.businessName}</h3>
-                    <p className="text-sm text-gray-600 mb-1">Sector: {listing.businessCategory || 'N/A'}</p>
-                    <p className="text-sm text-gray-600 mb-1">Origin: {listing.countryOfOrigin || 'N/A'}</p>
+                    <h3 className="text-xl font-semibold text-sky-700 mb-2 truncate" title={listing.businessName || listing.title || listing.company}>
+                      {listing.businessName || listing.title || listing.company}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-1">Sector: {listing.businessCategory || listing.category || 'N/A'}</p>
+                    <p className="text-sm text-gray-600 mb-1">Origin: {listing.countryOfOrigin || listing.location || 'N/A'}</p>
+                    {listing.description && (
+                      <p className="text-sm text-gray-600 mb-2 line-clamp-2">{listing.description}</p>
+                    )}
+                    {listing.rating && (
+                      <p className="text-sm text-gray-600 mb-1">Rating: {listing.rating}/5 ({listing.reviews} reviews)</p>
+                    )}
                     <p className="text-sm text-gray-600 mb-3">Targets: {Array.isArray(listing.targetMarkets) ? listing.targetMarkets.join(', ') : (listing.targetMarkets || 'N/A')}</p>
                     <div className="mt-auto">
                       <Link href={`/listings/${listing.id}`} className="text-sky-600 hover:text-sky-800 font-medium text-sm">
