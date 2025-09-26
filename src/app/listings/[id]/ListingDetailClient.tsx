@@ -72,7 +72,7 @@ export default function ListingDetailClient() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/listings/${id}`);
+        const response = await fetch(`/api/listings/${id}`);
         if (!response.ok) {
           const errorData = await response.json();
           if (response.status === 404) {

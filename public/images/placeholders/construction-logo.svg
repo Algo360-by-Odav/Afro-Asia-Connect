@@ -1,0 +1,7 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="200" fill="#EF4444"/>
+  <rect x="70" y="80" width="60" height="40" fill="white"/>
+  <polygon points="100,60 80,80 120,80" fill="white"/>
+  <rect x="90" y="120" width="20" height="30" fill="white"/>
+  <text x="100" y="180" text-anchor="middle" fill="white" font-family="Arial" font-size="14">Construction</text>
+</svg>
