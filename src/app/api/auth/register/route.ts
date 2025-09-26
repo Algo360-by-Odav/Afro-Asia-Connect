@@ -31,6 +31,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { success: false, msg: 'Database connection error' },
+        { status: 500 }
+      );
+    }
+
     // Check if user already exists
     const { data: existingUser } = await supabaseAdmin
       .from('users')
@@ -78,12 +85,12 @@ export async function POST(request: NextRequest) {
       msg: 'User registered successfully',
       data: {
         user: {
-          id: newUser.id,
-          email: newUser.email,
-          full_name: newUser.full_name,
-          phone_number: newUser.phone_number,
-          role: newUser.role,
-          created_at: newUser.created_at
+          id: (newUser as any)?.id,
+          email: (newUser as any)?.email,
+          full_name: (newUser as any)?.full_name,
+          phone_number: (newUser as any)?.phone_number,
+          role: (newUser as any)?.role,
+          created_at: (newUser as any)?.created_at
         }
       }
     });
