@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, full_name, phone_number } = await request.json();
+    const { email, password, full_name, phone_number, accountType } = await request.json();
 
     // Validate required fields
     if (!email || !password || !full_name) {
@@ -49,6 +49,9 @@ export async function POST(request: NextRequest) {
     const saltRounds = 12;
     const password_hash = await bcrypt.hash(password, saltRounds);
 
+    // Determine user role based on account type
+    const userRole = accountType || 'buyer'; // Default to buyer if not specified
+    
     // Insert new user
     const { data: newUser, error } = await supabaseAdmin
       .from('users')
@@ -57,8 +60,8 @@ export async function POST(request: NextRequest) {
         password_hash,
         full_name,
         phone_number,
-        role: 'member'
-      })
+        role: userRole
+      } as any)
       .select('id, email, full_name, phone_number, role, created_at')
       .single();
 

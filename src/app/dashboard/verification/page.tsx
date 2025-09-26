@@ -112,7 +112,7 @@ export default function BusinessVerificationPage() {
 
   const fetchVerificationStatus = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/verification/status`, {
+      const response = await fetch('/api/verification/status', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
