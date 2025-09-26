@@ -6,7 +6,9 @@ import { useAuth } from '@/context/AuthContext';
 export default function FixRolePage() {
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [testMessage, setTestMessage] = useState('');
   const [selectedRole, setSelectedRole] = useState('service_provider');
 
   const handleFixRole = async () => {
@@ -33,12 +35,48 @@ export default function FixRolePage() {
       if (response.ok) {
         setMessage(`✅ Success! Your role has been updated to: ${selectedRole}. Please refresh the page or log out and log back in to see the changes.`);
       } else {
-        setMessage(`❌ Error: ${data.error || 'Failed to update role'}`);
+        console.error('Role update failed:', data);
+        setMessage(`❌ Error: ${data.error || 'Failed to update role'}${data.details ? ` - ${data.details}` : ''}`);
       }
     } catch (error) {
+      console.error('Role update error:', error);
       setMessage(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTestToken = async () => {
+    if (!token) {
+      setTestMessage('Please log in first');
+      return;
+    }
+
+    setTestLoading(true);
+    setTestMessage('');
+
+    try {
+      const response = await fetch('/api/auth/test-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setTestMessage(`✅ Token is valid! User ID: ${data.user.userId}, Email: ${data.user.email}`);
+      } else {
+        console.error('Token test failed:', data);
+        setTestMessage(`❌ Token Error: ${data.error}${data.details ? ` - ${data.details}` : ''}`);
+      }
+    } catch (error) {
+      console.error('Token test error:', error);
+      setTestMessage(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setTestLoading(false);
     }
   };
 
@@ -62,7 +100,7 @@ export default function FixRolePage() {
           <h2 className="text-lg font-semibold text-gray-800 mb-2">Current User Info:</h2>
           <div className="bg-gray-100 p-4 rounded-md">
             <p><strong>Email:</strong> {user.email}</p>
-            <p><strong>Name:</strong> {user.full_name}</p>
+            <p><strong>Name:</strong> {(user as any)?.full_name || user.email}</p>
             <p><strong>Current Role:</strong> {user.role || 'Not set'}</p>
             <p><strong>User Type:</strong> {user.user_type || 'Not set'}</p>
           </div>
@@ -84,13 +122,29 @@ export default function FixRolePage() {
           </select>
         </div>
 
-        <button
-          onClick={handleFixRole}
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Updating...' : 'Update Role'}
-        </button>
+        <div className="space-y-3">
+          <button
+            onClick={handleTestToken}
+            disabled={testLoading}
+            className="w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {testLoading ? 'Testing...' : 'Test Token (Debug)'}
+          </button>
+          
+          <button
+            onClick={handleFixRole}
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Updating...' : 'Update Role'}
+          </button>
+        </div>
+
+        {testMessage && (
+          <div className="mt-4 p-4 rounded-md bg-blue-50 border border-blue-200">
+            <p className="text-sm text-blue-800">{testMessage}</p>
+          </div>
+        )}
 
         {message && (
           <div className="mt-4 p-4 rounded-md bg-gray-50 border">

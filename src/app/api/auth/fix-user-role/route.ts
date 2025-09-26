@@ -4,14 +4,27 @@ import jwt from 'jsonwebtoken';
 
 export async function POST(request: NextRequest) {
   try {
+    // Add detailed logging for debugging
+    console.log('Fix user role endpoint called');
+    
     const authHeader = request.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('No authorization header found');
       return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
     }
 
     const token = authHeader.substring(7);
+    console.log('Token received, length:', token.length);
+    
+    // Check if NEXTAUTH_SECRET exists
+    if (!process.env.NEXTAUTH_SECRET) {
+      console.error('NEXTAUTH_SECRET environment variable not found');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+    
     const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
     const userId = decoded.userId;
+    console.log('User ID from token:', userId);
 
     const { newRole } = await request.json();
 
@@ -24,8 +37,11 @@ export async function POST(request: NextRequest) {
     console.log('Fixing user role for userId:', userId, 'to role:', newRole);
     
     if (!supabaseAdmin) {
+      console.error('Supabase admin client not available');
       return NextResponse.json({ error: 'Database connection error' }, { status: 500 });
     }
+    
+    console.log('Supabase admin client available, attempting update');
     
     // Update user role in database
     const { data, error } = await supabaseAdmin
@@ -43,7 +59,9 @@ export async function POST(request: NextRequest) {
       console.error('Supabase error updating user role:', error);
       return NextResponse.json({ 
         error: 'Failed to update role', 
-        details: error.message
+        details: error.message,
+        code: error.code,
+        hint: error.hint
       }, { status: 500 });
     }
 
@@ -65,12 +83,19 @@ export async function POST(request: NextRequest) {
     console.error('Error in fix-user-role:', error);
     
     if (error instanceof jwt.JsonWebTokenError) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+      console.error('JWT Error:', error.message);
+      return NextResponse.json({ error: 'Invalid token', details: error.message }, { status: 401 });
+    }
+    
+    if (error instanceof jwt.TokenExpiredError) {
+      console.error('Token expired:', error.message);
+      return NextResponse.json({ error: 'Token expired', details: error.message }, { status: 401 });
     }
     
     return NextResponse.json({ 
       error: 'Internal server error', 
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
     }, { status: 500 });
   }
 }
