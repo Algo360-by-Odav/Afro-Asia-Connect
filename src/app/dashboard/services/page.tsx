@@ -39,7 +39,7 @@ export default function ManageServicesPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/services/my-services?page=${page}&limit=10`, {
+      const response = await fetch(`/api/services/my-services?page=${page}&limit=10`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) {
@@ -75,7 +75,7 @@ export default function ManageServicesPage() {
     if (!token) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/services/${serviceId}`, {
+      const response = await fetch(`/api/services/${serviceId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -91,7 +91,7 @@ export default function ManageServicesPage() {
   const toggleServiceStatus = async (service: Service) => {
     if (!token) return;
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/services/${service.id}`, {
+      const response = await fetch(`/api/services/${service.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
