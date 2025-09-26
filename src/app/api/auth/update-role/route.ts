@@ -31,7 +31,8 @@ export async function PUT(request: NextRequest) {
     // @ts-ignore - Temporary fix for Supabase type issues
     const { data, error } = await supabaseAdmin
       .from('users')
-      .update({ role, user_type: role })
+      // @ts-ignore
+      .update({ role })
       .eq('id', userId)
       .select()
       .single();

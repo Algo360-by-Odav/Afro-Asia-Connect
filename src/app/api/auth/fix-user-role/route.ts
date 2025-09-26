@@ -44,13 +44,11 @@ export async function POST(request: NextRequest) {
     console.log('Supabase admin client available, attempting update');
     
     // Update user role in database
+    // @ts-ignore - Temporary fix for Supabase type issues
     const { data, error } = await supabaseAdmin
       .from('users')
-      .update({ 
-        role: newRole,
-        user_type: newRole,
-        updated_at: new Date().toISOString()
-      } as any)
+      // @ts-ignore
+      .update({ role: newRole })
       .eq('id', userId)
       .select()
       .single();
@@ -74,8 +72,7 @@ export async function POST(request: NextRequest) {
         id: (data as any)?.id,
         email: (data as any)?.email,
         full_name: (data as any)?.full_name,
-        role: (data as any)?.role,
-        user_type: (data as any)?.user_type || (data as any)?.role
+        role: (data as any)?.role
       }
     });
 
