@@ -38,7 +38,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ isOpen, onClose
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/analytics/user/${user.id}?days=${selectedPeriod}`,
+        `/api/analytics/user/${user.id}?days=${selectedPeriod}`,
         { credentials: 'include' }
       );
       

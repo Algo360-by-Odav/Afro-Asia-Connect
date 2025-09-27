@@ -69,7 +69,7 @@ export default function AdvancedAnalyticsDashboard() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/analytics/user/${user?.id}?period=${dateRange}`, {
+      const response = await fetch(`/api/analytics/user/${user?.id}?period=${dateRange}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
