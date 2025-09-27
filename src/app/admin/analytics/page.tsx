@@ -208,7 +208,7 @@ export default function AdminAnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-900">
-              {analyticsData.bookings.totalBookings.toLocaleString()}
+              {analyticsData?.bookings?.totalBookings?.toLocaleString() || 0}
             </div>
             <p className="text-xs text-purple-700 mt-1">
               Platform bookings
@@ -270,7 +270,7 @@ export default function AdminAnalyticsPage() {
                   </div>
                   <div className="text-center p-3 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600">Total Bookings</p>
-                    <p className="text-xl font-semibold">{analyticsData.bookings.totalBookings}</p>
+                    <p className="text-xl font-semibold">{analyticsData?.bookings?.totalBookings || 0}</p>
                   </div>
                 </div>
               </CardContent>

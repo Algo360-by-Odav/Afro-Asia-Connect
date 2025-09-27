@@ -176,7 +176,7 @@ export default function AdvancedAnalyticsDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Bookings</p>
-                  <p className="text-3xl font-bold text-gray-900">{analyticsData.overview.totalBookings}</p>
+                  <p className="text-3xl font-bold text-gray-900">{analyticsData?.overview?.totalBookings || 0}</p>
                   <p className="text-sm text-green-600 mt-1">+12% from last period</p>
                 </div>
                 <Calendar className="w-8 h-8 text-blue-600" />
@@ -189,7 +189,7 @@ export default function AdvancedAnalyticsDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                  <p className="text-3xl font-bold text-gray-900">${analyticsData.overview.totalRevenue.toLocaleString()}</p>
+                  <p className="text-3xl font-bold text-gray-900">${analyticsData?.overview?.totalRevenue?.toLocaleString() || 0}</p>
                   <p className="text-sm text-green-600 mt-1">+18% from last period</p>
                 </div>
                 <DollarSign className="w-8 h-8 text-green-600" />
@@ -202,7 +202,7 @@ export default function AdvancedAnalyticsDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Customer Satisfaction</p>
-                  <p className="text-3xl font-bold text-gray-900">{analyticsData.overview.customerSatisfaction}/5.0</p>
+                  <p className="text-3xl font-bold text-gray-900">{analyticsData?.overview?.customerSatisfaction || 0}/5.0</p>
                   <p className="text-sm text-green-600 mt-1">+0.2 from last period</p>
                 </div>
                 <Star className="w-8 h-8 text-yellow-600" />
@@ -215,7 +215,7 @@ export default function AdvancedAnalyticsDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Response Time</p>
-                  <p className="text-3xl font-bold text-gray-900">{analyticsData.overview.responseTime}</p>
+                  <p className="text-3xl font-bold text-gray-900">{analyticsData?.overview?.responseTime || 'N/A'}</p>
                   <p className="text-sm text-green-600 mt-1">-15min improvement</p>
                 </div>
                 <Clock className="w-8 h-8 text-purple-600" />
@@ -231,7 +231,7 @@ export default function AdvancedAnalyticsDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Profile Views</p>
-                  <p className="text-3xl font-bold text-gray-900">{analyticsData.overview.profileViews}</p>
+                  <p className="text-3xl font-bold text-gray-900">{analyticsData?.overview?.profileViews || 0}</p>
                   <p className="text-sm text-blue-600 mt-1">This period</p>
                 </div>
                 <Eye className="w-8 h-8 text-blue-600" />
@@ -244,7 +244,7 @@ export default function AdvancedAnalyticsDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Inquiries</p>
-                  <p className="text-3xl font-bold text-gray-900">{analyticsData.overview.inquiries}</p>
+                  <p className="text-3xl font-bold text-gray-900">{analyticsData?.overview?.inquiries || 0}</p>
                   <p className="text-sm text-orange-600 mt-1">New inquiries</p>
                 </div>
                 <MessageSquare className="w-8 h-8 text-orange-600" />
@@ -257,7 +257,7 @@ export default function AdvancedAnalyticsDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Conversion Rate</p>
-                  <p className="text-3xl font-bold text-gray-900">{analyticsData.overview.conversionRate}%</p>
+                  <p className="text-3xl font-bold text-gray-900">{analyticsData?.overview?.conversionRate || 0}%</p>
                   <p className="text-sm text-green-600 mt-1">Above average</p>
                 </div>
                 <Target className="w-8 h-8 text-green-600" />
@@ -276,7 +276,7 @@ export default function AdvancedAnalyticsDashboard() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={analyticsData.bookingTrends}>
+                <LineChart data={analyticsData?.bookingTrends || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
@@ -296,7 +296,7 @@ export default function AdvancedAnalyticsDashboard() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={analyticsData.servicePerformance}>
+                <BarChart data={analyticsData?.servicePerformance || []}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
@@ -318,15 +318,15 @@ export default function AdvancedAnalyticsDashboard() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{analyticsData.customerInsights.repeatCustomers}%</div>
+                <div className="text-2xl font-bold text-blue-600">{analyticsData?.customerInsights?.repeatCustomers || 0}%</div>
                 <div className="text-sm text-gray-600">Repeat Customers</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">${analyticsData.customerInsights.averageBookingValue}</div>
+                <div className="text-2xl font-bold text-green-600">${analyticsData?.customerInsights?.averageBookingValue || 0}</div>
                 <div className="text-sm text-gray-600">Average Booking Value</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{analyticsData.customerInsights.topLocations.length}</div>
+                <div className="text-2xl font-bold text-purple-600">{analyticsData?.customerInsights?.topLocations?.length || 0}</div>
                 <div className="text-sm text-gray-600">Active Locations</div>
               </div>
             </div>
@@ -334,7 +334,7 @@ export default function AdvancedAnalyticsDashboard() {
             <div className="mt-6">
               <h4 className="text-lg font-medium text-gray-900 mb-4">Top Customer Locations</h4>
               <div className="space-y-3">
-                {analyticsData.customerInsights.topLocations.map((location, index) => (
+                {(analyticsData?.customerInsights?.topLocations || []).map((location, index) => (
                   <div key={location.location} className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
