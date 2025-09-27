@@ -6,6 +6,12 @@ import { API_BASE_URL } from '@/config/api';
 import { useAuth } from '@/context/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { ArrowLeft, Calendar, User, CheckCircle, Clock } from 'lucide-react';
+import Link from 'next/link';
 
 interface Service {
   id: string;
@@ -413,7 +419,7 @@ export default function BookServicePage() {
                           </label>
                           <Input
                             value={bookingData.customerName}
-                            onChange={(e) => handleInputChange('customerName', e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('customerName', e.target.value)}
                             placeholder="Enter your full name"
                           />
                         </div>
@@ -425,7 +431,7 @@ export default function BookServicePage() {
                           <Input
                             type="email"
                             value={bookingData.customerEmail}
-                            onChange={(e) => handleInputChange('customerEmail', e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('customerEmail', e.target.value)}
                             placeholder="Enter your email"
                           />
                         </div>
@@ -437,7 +443,7 @@ export default function BookServicePage() {
                           <Input
                             type="tel"
                             value={bookingData.customerPhone}
-                            onChange={(e) => handleInputChange('customerPhone', e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInputChange('customerPhone', e.target.value)}
                             placeholder="Enter your phone number"
                           />
                         </div>
@@ -448,7 +454,7 @@ export default function BookServicePage() {
                           </label>
                           <Textarea
                             value={bookingData.requirements}
-                            onChange={(e) => handleInputChange('requirements', e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInputChange('requirements', e.target.value)}
                             placeholder="Any specific requirements or notes..."
                             rows={4}
                           />

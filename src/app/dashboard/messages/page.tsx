@@ -53,11 +53,6 @@ interface Message {
     emoji: string;
     user: User;
   }>;
-  reply_to?: {
-    id: string;
-    content: string;
-    sender: User;
-  };
 }
 
 interface Conversation {
@@ -81,9 +76,7 @@ const MessagesPage: React.FC = () => {
     messages, 
     sendMessage: socketSendMessage, 
     onlineUsers, 
-    isUserOnline, 
     markAsRead, 
-    refreshConversations, 
     setActiveConversation 
   } = useSupabaseRealtime();
   
@@ -127,10 +120,20 @@ const MessagesPage: React.FC = () => {
     const value = e.target.value;
     setNewMessage(value);
 
-    if (!activeConversation) return;
+    // Handle typing indicators (simplified for Supabase Realtime)
+    if (!isTyping && value.length > 0) {
+      setIsTyping(true);
+    }
 
-    // Note: Typing indicators not implemented in Supabase Realtime version
-    // This would require additional real-time presence features
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set new timeout to stop typing indicator
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+    }, 1000);
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -138,12 +141,11 @@ const MessagesPage: React.FC = () => {
     if (!newMessage.trim() || !activeConversation || sendingMessage) return;
 
     setSendingMessage(true);
-    
     try {
-      // Use Supabase Realtime for message sending
       if (isConnected) {
-        await socketSendMessage(activeConversation.id, newMessage.trim());
+        await socketSendMessage(newMessage.trim(), 'TEXT');
         setNewMessage('');
+        setIsTyping(false);
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -179,11 +181,7 @@ const MessagesPage: React.FC = () => {
       
       // Send file message via Supabase Realtime
       if (isConnected) {
-        await socketSendMessage(activeConversation.id, `Shared a file: ${file.name}`, {
-          messageType: 'FILE',
-          fileUrl: data.fileUrl,
-          fileName: file.name
-        });
+        await socketSendMessage(`Shared a file: ${file.name}`, 'FILE');
       }
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -204,9 +202,12 @@ const MessagesPage: React.FC = () => {
     });
   };
 
-  const getParticipantName = (participants: any[]) => {
-    const otherParticipant = participants.find(p => p.id !== user?.id);
-    return otherParticipant?.full_name || otherParticipant?.email || 'Unknown User';
+  const getParticipantName = (participants: any[] | undefined) => {
+    if (!participants) return 'Unknown User';
+    const otherParticipant = participants.find(p => String(p.id) !== String(user?.id));
+    return otherParticipant ? 
+      `${otherParticipant.firstName || ''} ${otherParticipant.name || ''}`.trim() || otherParticipant.email || 'Unknown User'
+      : 'Unknown User';
   };
 
   const filteredConversations = conversations.filter(conv => {
@@ -231,9 +232,15 @@ const MessagesPage: React.FC = () => {
                 isConnected ? 'text-green-600' : 'text-red-600'
               }`}>
                 {isConnected ? (
-                  <><Wifi className="h-4 w-4" /> <span>Connected</span></>
+                  <>
+                    <Wifi className="h-4 w-4" />
+                    <span>Connected</span>
+                  </>
                 ) : (
-                  <><WifiOff className="h-4 w-4" /> <span>Disconnected</span></>
+                  <>
+                    <WifiOff className="h-4 w-4" />
+                    <span>Disconnected</span>
+                  </>
                 )}
               </div>
               <button 
@@ -258,51 +265,57 @@ const MessagesPage: React.FC = () => {
             />
           </div>
         </div>
-        
+
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto">
-          {conversations.length === 0 ? (
+          {filteredConversations.length === 0 ? (
             <div className="p-4 text-center text-gray-500">
-              {searchTerm ? 'No conversations found' : 'No conversations yet'}
+              <MessageCircle className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+              <p>No conversations found</p>
             </div>
           ) : (
             filteredConversations.map((conversation) => {
+              const participantName = getParticipantName(conversation.participants);
+              const isActive = activeConversation?.id === conversation.id;
               const otherParticipant = conversation.participants?.find(p => String(p.id) !== String(user?.id));
-              const isOnline = otherParticipant ? isUserOnline(String(otherParticipant.id)) : false;
-              const participantName = getParticipantName(conversation.participants || []);
+              const isOnline = false; // Remove isUserOnline since it's not available
               
               return (
                 <div
                   key={conversation.id}
                   onClick={() => setActiveConversation(conversation)}
                   className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    activeConversation?.id === conversation.id ? 'bg-blue-50 border-r-2 border-r-blue-500' : ''
+                    isActive ? 'bg-blue-50 border-blue-200' : ''
                   }`}
                 >
                   <div className="flex items-center space-x-3">
                     <div className="relative">
-                      <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
-                        {(otherParticipant?.full_name || otherParticipant?.email)?.charAt(0)?.toUpperCase() || '?'}
+                      <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+                        <Users className="h-5 w-5 text-gray-600" />
                       </div>
                       {isOnline && (
-                        <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 border-2 border-white rounded-full"></div>
+                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                       )}
                     </div>
-                    
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-gray-900 truncate">
+                        <h3 className="text-sm font-medium text-gray-900 truncate">
                           {participantName}
                         </h3>
-                        <span className="text-xs text-gray-500">
-                          {conversation.last_message ? formatTime(conversation.last_message.created_at) : ''}
-                        </span>
+                        {conversation.last_message && (
+                          <span className="text-xs text-gray-500">
+                            {formatTime(conversation.last_message.created_at)}
+                          </span>
+                        )}
                       </div>
-                      
-                      <p className="text-sm text-gray-600 truncate mt-1">
-                        {conversation.last_message?.message_type === 'FILE' ? '📎 File' :
-                         conversation.last_message?.content || 'No messages yet'}
-                      </p>
+                      {conversation.last_message && (
+                        <p className="text-sm text-gray-600 truncate mt-1">
+                          {conversation.last_message.message_type === 'FILE' 
+                            ? `📎 ${conversation.last_message.file_name || 'File'}`
+                            : conversation.last_message.content
+                          }
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -312,48 +325,46 @@ const MessagesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Chat Area */}
+      {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {activeConversation ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
-                  {getParticipantName(activeConversation.participants).charAt(0).toUpperCase()}
+            <div className="bg-white border-b border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+                    <Users className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      {getParticipantName(activeConversation.participants)}
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      {isAnyoneTyping ? `${typingUsersList.join(', ')} typing...` : 'Online'}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-medium text-gray-900">
-                    {getParticipantName(activeConversation.participants)}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    {(() => {
-                      const otherParticipant = activeConversation.participants.find((p: any) => String(p.id) !== String(user?.id));
-                      return otherParticipant && isUserOnline(String(otherParticipant.id)) ? 'Online' : 'Offline';
-                    })()}
-                  </p>
+                <div className="flex items-center space-x-2">
+                  <button 
+                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                    title="Voice call"
+                  >
+                    <Phone className="h-5 w-5" />
+                  </button>
+                  <button 
+                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                    title="Video call"
+                  >
+                    <Video className="h-5 w-5" />
+                  </button>
+                  <button 
+                    className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                    title="Conversation info"
+                  >
+                    <Info className="h-5 w-5" />
+                  </button>
                 </div>
-              </div>
-                
-              <div className="flex items-center space-x-2">
-                <button 
-                  className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
-                  title="Voice call"
-                >
-                  <Phone className="h-5 w-5" />
-                </button>
-                <button 
-                  className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
-                  title="Video call"
-                >
-                  <Video className="h-5 w-5" />
-                </button>
-                <button 
-                  className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
-                  title="Conversation info"
-                >
-                  <Info className="h-5 w-5" />
-                </button>
               </div>
             </div>
 
@@ -399,17 +410,15 @@ const MessagesPage: React.FC = () => {
                       )}
                       
                       <div className="flex items-center justify-between mt-2">
-                        <span className={`text-xs ${
-                          isOwn ? 'text-blue-100' : 'text-gray-500'
-                        }`}>
+                        <span className={`text-xs ${isOwn ? 'text-blue-100' : 'text-gray-500'}`}>
                           {formatTime(message.created_at)}
                         </span>
                         {isOwn && (
                           <div className="flex items-center space-x-1">
                             {message.is_read ? (
-                              <CheckCheck className="h-3 w-3 text-blue-100" />
+                              <CheckCheck className="h-3 w-3 text-blue-200" />
                             ) : (
-                              <Check className="h-3 w-3 text-blue-100" />
+                              <Check className="h-3 w-3 text-blue-200" />
                             )}
                           </div>
                         )}
@@ -418,25 +427,6 @@ const MessagesPage: React.FC = () => {
                   </div>
                 );
               })}
-
-              {/* Typing Indicator */}
-              {isAnyoneTyping && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-200 rounded-lg px-4 py-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-100"></div>
-                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-200"></div>
-                      </div>
-                      <span className="text-xs text-gray-600">
-                        {typingUsersList.join(', ')} {typingUsersList.length === 1 ? 'is' : 'are'} typing...
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <div ref={messagesEndRef} />
             </div>
 
@@ -444,59 +434,56 @@ const MessagesPage: React.FC = () => {
             <div className="bg-white border-t border-gray-200 p-4">
               <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
                 <input
-                  type="file"
                   ref={fileInputRef}
+                  type="file"
                   onChange={handleFileUpload}
                   className="hidden"
-                  aria-label="Attach file"
                   accept="*/*"
+                  aria-label="Upload file"
                 />
-                
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingFile}
-                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
                   title="Attach file"
                 >
                   <Paperclip className="h-5 w-5" />
                 </button>
-
+                
                 <div className="flex-1 relative">
                   <input
                     type="text"
                     value={newMessage}
                     onChange={handleInputChange}
-                    placeholder="Type your message..."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled={sendingMessage}
-                    aria-label="Message input"
+                    placeholder="Type a message..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-12"
+                    disabled={sendingMessage || !isConnected}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    aria-label="Add emoji"
+                  >
+                    <Smile className="h-5 w-5" />
+                  </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-                  title="Add emoji"
-                >
-                  <Smile className="h-5 w-5" />
-                </button>
-
+                
                 <button
                   type="submit"
-                  disabled={!newMessage.trim() || sendingMessage}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  disabled={!newMessage.trim() || sendingMessage || !isConnected}
+                  className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Send message"
                 >
-                  <Send className="h-4 w-4" />
-                  <span>{sendingMessage ? 'Sending...' : 'Send'}</span>
+                  <Send className="h-5 w-5" />
                 </button>
               </form>
-
+              
               {uploadingFile && (
-                <div className="mt-2 text-sm text-gray-600">
-                  Uploading file...
+                <div className="mt-2 text-sm text-gray-500 flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                  <span>Uploading file...</span>
                 </div>
               )}
             </div>
